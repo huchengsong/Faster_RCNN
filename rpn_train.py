@@ -119,8 +119,8 @@ if __name__ == '__main__':
 
         # extract files
         print('extracting...')
-        tar = tarfile.open('VOCtrainval_11-May-2012.tar')
-        tar.extractall()
+        tar = tarfile.open('..\VOCtrainval_11-May-2012.tar')
+        tar.extractall('..\\')
         tar.close()
         print('done')
 

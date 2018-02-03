@@ -2,9 +2,9 @@ import xml.etree.ElementTree as ET
 import os 
 import numpy as np
 
-XML_DIR = 'VOCdevkit\VOC2012\Annotations'
-IMG_DIR = 'VOCdevkit\VOC2012\JPEGImages'
-SAVE_DIR = 'VOCdevkit\img_box_dict.npy'
+XML_DIR = '..\VOCdevkit\VOC2012\Annotations'
+IMG_DIR = '..\VOCdevkit\VOC2012\JPEGImages'
+SAVE_DIR = '..\VOCdevkit\img_box_dict.npy'
 
 
 def voc2012_generate_img_box_dict(xml_dir, img_dir):
