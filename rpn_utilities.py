@@ -60,13 +60,14 @@ def generate_gt_cls_reg(img_info, score_dim, base_size, ratios, scales):
     # set 1 to the anchors that have the highest IoU with a ground-truth box
     # overwrite -1s for the anchors that have <0.3 IoU but have the highest IoU for a gt box
     ind_max_iou_with_gt = np.argmax(iou_matrix, axis=1)
+    print(ind_max_iou_with_gt)
     max_iou_with_gt = iou_matrix[np.arange(ground_truth_boxes.shape[0]), ind_max_iou_with_gt]
     ind_max_iou_with_gt = np.where(np.transpose(iou_matrix) == max_iou_with_gt)[0]
     labels[ind_max_iou_with_gt] = 1
 
     # batch size 256. ratio of positive and negative anchors 1:1
     # if positive anchors are too many, reduce the positive anchor number
-    ind_positive_anchor = np.squeeze(np.where(labels == 1))
+    ind_positive_anchor = np.where(labels == 1)
     num_positive_anchor = len(ind_positive_anchor)
     if num_positive_anchor > BATCH_SIZE / 2:
         disable_inds = np.random.choice(
@@ -77,7 +78,7 @@ def generate_gt_cls_reg(img_info, score_dim, base_size, ratios, scales):
 
     # if negative anchors are too many, reduce the negative anchor number
     # if positive anchors are not enough, pad with negative anchors
-    ind_negative_anchor = np.squeeze(np.where(labels == -1))
+    ind_negative_anchor = np.where(labels == -1)
     num_negative_anchor = len(ind_negative_anchor)
     if num_negative_anchor > max(BATCH_SIZE / 2, BATCH_SIZE - num_positive_anchor):
         disable_inds = np.random.choice(
@@ -132,7 +133,7 @@ def _unmap(data, num_original_data, index_of_data, fill=0):
     return ret
 
 
-def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda):
+def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda=False):
     """
     return loss of region proposal networks
     :param cls_score: (1, 2 * num_ratio * num_scale, H, W), predicted class scores, pytorch Variable
@@ -202,68 +203,64 @@ if __name__ == "__main__":
     # fill = -1
     # ret = _unmap(data, num_original_data, index_of_data, fill)
     # print(ret)
-
     # test generate_gt_cls_reg
-    img_box_dict = np.load('.\VOCtrainval\img_box_dict.npy')[()]
-    img_dir = list(img_box_dict.keys())[13]
-    img_info = img_box_dict[img_dir]
-    img_dir = os.path.join('.\\VOCtrainval\\', img_dir)
+    img_box_dict = np.load('../VOCdevkit/img_box_dict.npy')[()]
+    for img_dir, img_info in img_box_dict.items():
+        image, modified_image_info = rescale_image(img_dir, img_info)
 
-    image, modified_image_info = rescale_image(img_dir, img_info)
-
-    cls_score_dim = np.array([np.floor(modified_image_info['img_size'][0]/16).astype(np.int),
+        cls_score_dim = np.array([np.floor(modified_image_info['img_size'][0]/16).astype(np.int),
                               np.floor(modified_image_info['img_size'][1]/16).astype(np.int)])
-    base_size = 16
-    ratios = [0.5, 1.0, 2.0]
-    scales = [8, 16, 32]
-    one_hot_label, gt_box = generate_gt_cls_reg(img_info, cls_score_dim, base_size, ratios, scales)
-    # draw ground truth boxes on image
-    for object in img_info['objects']:
-        ymin, xmin, ymax, xmax = [int(i) for i in object[1:5]]
-        cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
-        cv2.putText(image,
+        base_size = 16
+        ratios = [0.5, 1.0, 2.0]
+        scales = [8, 16, 32]
+        one_hot_label, gt_box = generate_gt_cls_reg(img_info, cls_score_dim, base_size, ratios, scales)
+        # draw ground truth boxes on image
+        for object in img_info['objects']:
+            ymin, xmin, ymax, xmax = [int(i) for i in object[1:5]]
+            cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
+            cv2.putText(image,
                     object[0],
                     (xmin, ymin),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                     (0, 0, 255))
 
-    # generate anchors
-    anchor_list = generate_anchors(base_size=base_size, ratios=ratios, scales=scales)
-    anchor_x_shift = np.arange(0, cls_score_dim[1]) * \
+        # generate anchors
+        anchor_list = generate_anchors(base_size=base_size, ratios=ratios, scales=scales)
+        anchor_x_shift = np.arange(0, cls_score_dim[1]) * \
                      base_size + base_size / 2
-    anchor_y_shift = np.arange(0, cls_score_dim[0]) * \
+        anchor_y_shift = np.arange(0, cls_score_dim[0]) * \
                      base_size + base_size / 2
-    anchor_centers = np.array([[i, j]
+        anchor_centers = np.array([[i, j]
                                for i in anchor_y_shift
                                for j in anchor_x_shift])
-    all_anchors = np.array([np.tile(anchor_centers[i], 2) + anchor_list[j]
+        all_anchors = np.array([np.tile(anchor_centers[i], 2) + anchor_list[j]
                             for i in range(0, anchor_centers.shape[0])
                             for j in range(0, anchor_list.shape[0])])
-    all_anchors = np.reshape(
-        all_anchors,
-        [1, cls_score_dim[0], cls_score_dim[1], 4 * anchor_list.shape[0]],
-        order='C')
-    all_anchors = np.transpose(all_anchors, (0, 3, 1, 2))
-    # print('positive: ', np.sum(label == 1))
-    # print('zero', np.sum(label == 0))
-    # print('negative', np.sum(label == -1))
-    # print(all_anchors.shape)
+        all_anchors = np.reshape(
+            all_anchors,
+            [1, cls_score_dim[0], cls_score_dim[1], 4 * anchor_list.shape[0]],
+            order='C')
+        all_anchors = np.transpose(all_anchors, (0, 3, 1, 2))
+        # print('positive: ', np.sum(label == 1))
+        # print('zero', np.sum(label == 0))
+        # print('negative', np.sum(label == -1))
+        # print(all_anchors.shape)
 
-    # draw positive anchors
-    for i in range(cls_score_dim[0]):
-        for j in range(cls_score_dim[1]):
-            for k in range(len(ratios)*len(scales)):
-                if one_hot_label[0, 2 * k, i, j] == 1:
-                    anchor = all_anchors[0, k*4:(k+1)*4, i, j]
-                    ymin, xmin, ymax, xmax = [int(i) for i in anchor]
-                    color = np.squeeze([np.random.randint(255, size=1),
-                                     np.random.randint(255, size=1),
-                                     np.random.randint(255, size=1)]).tolist()
-                    cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 1)
+        # draw positive anchors
+        for i in range(cls_score_dim[0]):
+            for j in range(cls_score_dim[1]):
+                for k in range(len(ratios)*len(scales)):
+                    if one_hot_label[0, 2 * k, i, j] == 1:
+                        anchor = all_anchors[0, k*4:(k+1)*4, i, j]
+                        ymin, xmin, ymax, xmax = [int(i) for i in anchor]
+                        color = np.squeeze([np.random.randint(255, size=1),
+                                            np.random.randint(255, size=1),
+                                            np.random.randint(255, size=1)]).tolist()
+                        cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 1)
 
-    cv2.imshow('image', image)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+        cv2.imshow('image', image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     cls_score = Variable(torch.randn((1, 4, 40, 40)))
     reg_score = Variable(torch.randn((1, 8, 40, 40)))
