@@ -34,10 +34,10 @@ def rescale_image(img_dir, img_info):
 
 if __name__ == '__main__':
     import os
-    img_box_dict = np.load('.\VOCtrainval\img_box_dict.npy')[()]
+    img_box_dict = np.load('../VOCdevkit/img_box_dict.npy')[()]
     img_dir = list(img_box_dict.keys())[90]
     img_info = img_box_dict[img_dir]
-    img_dir = os.path.join('.\\VOCtrainval\\', img_dir)
+    img_dir = os.path.join('../VOCdevkit/', img_dir)
     print(img_info)
     image, image_info = rescale_image(img_dir, img_info)
     print(img_info)

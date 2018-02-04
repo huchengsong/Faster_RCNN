@@ -2,9 +2,9 @@ import xml.etree.ElementTree as ET
 import os 
 import numpy as np
 
-XML_DIR = '..\VOCdevkit\VOC2012\Annotations'
-IMG_DIR = '..\VOCdevkit\VOC2012\JPEGImages'
-SAVE_DIR = '..\VOCdevkit\img_box_dict.npy'
+XML_DIR = '../VOCdevkit/VOC2012/Annotations'
+IMG_DIR = '../VOCdevkit/VOC2012/JPEGImages'
+SAVE_DIR = '../VOCdevkit/img_box_dict.npy'
 
 
 def voc2012_generate_img_box_dict(xml_dir, img_dir):
@@ -22,7 +22,7 @@ def voc2012_generate_img_box_dict(xml_dir, img_dir):
             root = tree.getroot()
 
             # get img path from xml file and store in the dict
-            img_path = img_dir+'\\' + root.find('filename').text
+            img_path = img_dir+'/' + root.find('filename').text
             img_box_dict[img_path] = {}
 
             width = int(root.find('size').find('width').text)

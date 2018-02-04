@@ -45,7 +45,7 @@ def train_rpn(img_dict_dir, epoch=1, cuda=False):
             score_dim = cls_score.size()[2:4]
             cls_gt, reg_gt = rpn_utilities.generate_gt_cls_reg(modified_img_info, score_dim, BASE_SIZE, RATIOS, SCALES)
 
-            loss = rpn_utilities.generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt)
+            loss = rpn_utilities.generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda)
             print('image: {}/{}, loss: {}'.format(img_index, img_num, loss.data[0]))
             loss.backward()
             optimizer.step()
@@ -111,27 +111,44 @@ def show_result(img_info, gt_label, score_dim, base_size, ratios, scales):
 
 
 if __name__ == '__main__':
-    if not os.path.isdir('..\VOCdevkit'):
+    if not os.path.isdir('../VOCdevkit'):
         url = 'http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar'
         print('downloading VOCtrainval_11-May-2012.tar')
-        urllib.request.urlretrieve(url, '..\VOCtrainval_11-May-2012.tar')
+
+        import sys
+        import time
+
+        def progress(count, block_size, total_size):
+            global start_time
+            if count == 0:
+                start_time = time.time()
+                return
+            duration = time.time() - start_time
+            progress_size = int(count * block_size)
+            speed = int(progress_size / (1024 * duration))
+            percent = int(count * block_size * 100 / total_size)
+            sys.stdout.write("\r...%d%%, %d MB, %d KB/s, %d seconds passed" %
+                             (percent, progress_size / (1024 * 1024), speed, duration))
+            sys.stdout.flush()
+
+        urllib.request.urlretrieve(url, '../VOCtrainval_11-May-2012.tar', progress)
         print('done')
 
         # extract files
         print('extracting...')
-        tar = tarfile.open('..\VOCtrainval_11-May-2012.tar')
-        tar.extractall('..\\')
+        tar = tarfile.open('../VOCtrainval_11-May-2012.tar')
+        tar.extractall('../')
         tar.close()
         print('done')
 
-    if not os.path.isfile('..\VOCdevkit\img_box_dict.npy'):
+    if not os.path.isfile('../VOCdevkit/img_box_dict.npy'):
         # create image bounding box ground truth dictionary
-        xml_dir = '..\VOCdevkit\VOC2012\Annotations'
-        img_dir = '..\VOCdevkit\VOC2012\JPEGImages'
-        save_dir = '..\VOCdevkit\img_box_dict.npy'
+        xml_dir = '../VOCdevkit/VOC2012/Annotations'
+        img_dir = '../VOCdevkit/VOC2012/JPEGImages'
+        save_dir = '../VOCdevkit/img_box_dict.npy'
         img_box_dict = voc2012_generate_img_box_dict(xml_dir, img_dir)
         np.save(save_dir, img_box_dict)
 
-    train_rpn('..\VOCdevkit\img_box_dict.npy', epoch=3, cuda=torch.cuda.is_available())
+    train_rpn('../VOCdevkit/img_box_dict.npy', epoch=3, cuda=torch.cuda.is_available())
 
 

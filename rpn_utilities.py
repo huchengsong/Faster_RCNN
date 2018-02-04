@@ -132,7 +132,7 @@ def _unmap(data, num_original_data, index_of_data, fill=0):
     return ret
 
 
-def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt):
+def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda):
     """
     return loss of region proposal networks
     :param cls_score: (1, 2 * num_ratio * num_scale, H, W), predicted class scores, pytorch Variable
@@ -150,7 +150,11 @@ def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt):
 
     # calculate cross-entropy loss of class scores
     n_cls = Variable(torch.FloatTensor(np.array([np.sum(cls_gt == 1)])))
+    if cuda:
+        n_cls = n_cls.cuda()
     cls_gt_tensor = Variable(torch.from_numpy(cls_gt).type(torch.FloatTensor))
+    if cuda:
+        cls_gt_tensor = cls_gt_tensor.cuda()
     cls_loss = torch.div(
         torch.sum(torch.mul(minus_log_cls_score, cls_gt_tensor)),
         n_cls)
@@ -158,7 +162,12 @@ def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt):
     # calculate regression loss for bounding box prediction
     # smooth L1 loss
     n_reg = Variable(torch.FloatTensor(np.array([(cls_score.size()[2] * cls_score.size()[3])])))
-    diff_reg = reg_score - Variable(torch.from_numpy(reg_gt))
+    if cuda:
+        n_reg = n_reg.cuda()
+    reg_gt = Variable(torch.from_numpy(reg_gt))
+    if cuda:
+        reg_gt = reg_gt.cuda()
+    diff_reg = reg_score - reg_gt
     abs_diff_reg = torch.abs(diff_reg)
     loss_larger_than_one = torch.mul((abs_diff_reg >= 1).type(torch.FloatTensor),
                                      abs_diff_reg - 0.5)
@@ -166,11 +175,11 @@ def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt):
                                       torch.mul(torch.pow(abs_diff_reg, 2), 0.5))
     sum_reg_loss = torch.add(loss_larger_than_one, loss_smaller_than_one)
     reg_mask = np.repeat(cls_gt[:, [2 * k for k in range(num_anchors)], :, :], 4, axis=1)
+    reg_mask = Variable(torch.from_numpy(reg_mask).type(torch.FloatTensor))
+    if cuda:
+        reg_mask = reg_mask.cuda()
     sum_reg_loss = torch.sum(
-        torch.div(
-            torch.mul(Variable(torch.from_numpy(reg_mask).type(torch.FloatTensor)),
-                      sum_reg_loss),
-            4))
+        torch.div(torch.mul(reg_mask, sum_reg_loss), 4))
     reg_loss = torch.mul(torch.div(sum_reg_loss, n_reg), 10)
     return torch.add(cls_loss, reg_loss)
 
