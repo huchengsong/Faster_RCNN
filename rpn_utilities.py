@@ -169,10 +169,16 @@ def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda):
         reg_gt = reg_gt.cuda()
     diff_reg = reg_score - reg_gt
     abs_diff_reg = torch.abs(diff_reg)
-    loss_larger_than_one = torch.mul((abs_diff_reg >= 1).type(torch.FloatTensor),
-                                     abs_diff_reg - 0.5)
-    loss_smaller_than_one = torch.mul((abs_diff_reg < 1).type(torch.FloatTensor),
-                                      torch.mul(torch.pow(abs_diff_reg, 2), 0.5))
+    if not cuda:
+        loss_larger_than_one = torch.mul((abs_diff_reg >= 1).type(torch.FloatTensor),
+                                         abs_diff_reg - 0.5)
+        loss_smaller_than_one = torch.mul((abs_diff_reg < 1).type(torch.FloatTensor),
+                                          torch.mul(torch.pow(abs_diff_reg, 2), 0.5))
+    if cuda:
+        loss_larger_than_one = torch.mul((abs_diff_reg >= 1).type(torch.FloatTensor).cuda(),
+                                         abs_diff_reg - 0.5)
+        loss_smaller_than_one = torch.mul((abs_diff_reg < 1).type(torch.FloatTensor).cuda(),
+                                          torch.mul(torch.pow(abs_diff_reg, 2), 0.5))
     sum_reg_loss = torch.add(loss_larger_than_one, loss_smaller_than_one)
     reg_mask = np.repeat(cls_gt[:, [2 * k for k in range(num_anchors)], :, :], 4, axis=1)
     reg_mask = Variable(torch.from_numpy(reg_mask).type(torch.FloatTensor))
