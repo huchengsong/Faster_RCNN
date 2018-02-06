@@ -13,7 +13,7 @@ from rescale_image import rescale_image
 from generate_anchors import generate_anchors
 from rpn_model import RPN
 from voc2012_parse_xml import voc2012_generate_img_box_dict
-import rpn_utilities
+import rpn_utils
 
 BASE_SIZE = 16
 RATIOS = [0.5, 1.0, 2.0]
@@ -28,8 +28,7 @@ def train_rpn(img_dict_dir, epoch=1, cuda=False):
     net = RPN(MODEL_NAME, len(RATIOS) * len(SCALES))
     if cuda == 1:
         net.cuda()
-    optimizer = optim.Adam(net.parameters(), lr=0.00005)
-    optimizer.zero_grad()
+    optimizer = optim.Adam(net.parameters())
     print(net)
 
     for i in range(epoch):
@@ -43,10 +42,11 @@ def train_rpn(img_dict_dir, epoch=1, cuda=False):
                 img = img.cuda()
             cls_score, reg_score = net(img)
             score_dim = cls_score.size()[2:4]
-            cls_gt, reg_gt = rpn_utilities.generate_gt_cls_reg(modified_img_info, score_dim, BASE_SIZE, RATIOS, SCALES)
+            cls_gt, reg_gt = rpn_utils.generate_gt_cls_reg(modified_img_info, score_dim, BASE_SIZE, RATIOS, SCALES)
 
-            loss = rpn_utilities.generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda)
+            loss = rpn_utils.generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda)
             print('image: {}/{}, loss: {}'.format(img_index, img_num, loss.data[0]))
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 

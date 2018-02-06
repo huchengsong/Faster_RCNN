@@ -1,26 +1,26 @@
 import numpy as np
 
 
-def box_parameterize(input_boxes, anchor_boxes):
+def box_parameterize(input_boxes, base_boxes):
     """
     :param input_boxes: (N, 4)
-    :param anchor_boxes: (N, 4)
-    :return: parameterized boxes based on anchor_boxes
+    :param base_boxes: (N, 4)
+    :return: parameterized boxes based on base_boxes
     """
     input_boxes_height = input_boxes[:, 2] - input_boxes[:, 0] + 1
     input_boxes_width = input_boxes[:, 3] - input_boxes[:, 1] + 1
     input_boxes_ctr_y = (input_boxes[:, 2] + input_boxes[:, 0]) / 2
     input_boxes_ctr_x = (input_boxes[:, 3] + input_boxes[:, 1]) / 2
 
-    anchor_boxes_height = anchor_boxes[:, 2] - anchor_boxes[:, 0] + 1
-    anchor_boxes_width = anchor_boxes[:, 3] - anchor_boxes[:, 1] + 1
-    anchor_boxes_ctr_y = (anchor_boxes[:, 2] + anchor_boxes[:, 0]) / 2
-    anchor_boxes_ctr_x = (anchor_boxes[:, 3] + anchor_boxes[:, 1]) / 2
+    base_boxes_height = base_boxes[:, 2] - base_boxes[:, 0] + 1
+    base_boxes_width = base_boxes[:, 3] - base_boxes[:, 1] + 1
+    base_boxes_ctr_y = (base_boxes[:, 2] + base_boxes[:, 0]) / 2
+    base_boxes_ctr_x = (base_boxes[:, 3] + base_boxes[:, 1]) / 2
 
-    result_ctr_x = (input_boxes_ctr_x - anchor_boxes_ctr_x) / anchor_boxes_width
-    result_ctr_y = (input_boxes_ctr_y - anchor_boxes_ctr_y) / anchor_boxes_height
-    result_width = np.log(input_boxes_width / anchor_boxes_width)  # natural logarithm
-    result_height = np.log(input_boxes_height / anchor_boxes_height)  # natural logarithm
+    result_ctr_x = (input_boxes_ctr_x - base_boxes_ctr_x) / base_boxes_width
+    result_ctr_y = (input_boxes_ctr_y - base_boxes_ctr_y) / base_boxes_height
+    result_width = np.log(input_boxes_width / base_boxes_width)  # natural logarithm
+    result_height = np.log(input_boxes_height / base_boxes_height)  # natural logarithm
 
     result = np.vstack(
         (result_ctr_y, result_ctr_x, result_height, result_width)
@@ -28,22 +28,22 @@ def box_parameterize(input_boxes, anchor_boxes):
 
     return result
 
-def box_deparameterize(input_boxes, anchor_boxes):
+def box_deparameterize(input_boxes, base_boxes):
     """
     :param input_boxes: (N, 4)
-    :param anchor_boxes: (N, 4)
-    :return: de-parameterized boxes based on anchor_boxes
+    :param base_boxes: (N, 4)
+    :return: de-parameterized boxes based on base_boxes
 
     """
-    anchor_boxes_height = anchor_boxes[:, 2] - anchor_boxes[:, 0] + 1
-    anchor_boxes_width = anchor_boxes[:, 3] - anchor_boxes[:, 1] + 1
-    anchor_boxes_ctr_y = (anchor_boxes[:, 2] + anchor_boxes[:, 0]) / 2
-    anchor_boxes_ctr_x = (anchor_boxes[:, 3] + anchor_boxes[:, 1]) / 2
+    base_boxes_height = base_boxes[:, 2] - base_boxes[:, 0] + 1
+    base_boxes_width = base_boxes[:, 3] - base_boxes[:, 1] + 1
+    base_boxes_ctr_y = (base_boxes[:, 2] + base_boxes[:, 0]) / 2
+    base_boxes_ctr_x = (base_boxes[:, 3] + base_boxes[:, 1]) / 2
 
-    result_height = np.exp(input_boxes[:, 2]) * anchor_boxes_height
-    result_width = np.exp(input_boxes[:, 3]) * anchor_boxes_width
-    result_ctr_y = input_boxes[:, 0] * anchor_boxes_height + anchor_boxes_ctr_y
-    result_ctr_x = input_boxes[:, 1] * anchor_boxes_width + anchor_boxes_ctr_x
+    result_height = np.exp(input_boxes[:, 2]) * base_boxes_height
+    result_width = np.exp(input_boxes[:, 3]) * base_boxes_width
+    result_ctr_y = input_boxes[:, 0] * base_boxes_height + base_boxes_ctr_y
+    result_ctr_x = input_boxes[:, 1] * base_boxes_width + base_boxes_ctr_x
 
     input_boxes_ymin = result_ctr_y - (result_height - 1) / 2
     input_boxes_xmin = result_ctr_x - (result_width - 1) / 2

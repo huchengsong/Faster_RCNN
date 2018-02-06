@@ -3,6 +3,9 @@
   <component name="ChangeListManager">
     <list default="true" id="92fc54e1-84d1-4292-96b2-cd335e059ffa" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change beforePath="$PROJECT_DIR$/box_parametrize.py" afterPath="$PROJECT_DIR$/box_parametrize.py" />
+      <change beforePath="$PROJECT_DIR$/rpn_train.py" afterPath="$PROJECT_DIR$/rpn_train.py" />
+      <change beforePath="$PROJECT_DIR$/rpn_utilities.py" afterPath="" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -12,18 +15,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="375">
-      <file leaf-file-name="rpn_train.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/rpn_train.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="280">
-              <caret line="35" column="50" lean-forward="true" selection-start-line="35" selection-start-column="8" selection-end-line="35" selection-end-column="50" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="375" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -46,6 +38,10 @@
       <find>NUM_REGION_PROPOSAL</find>
       <find>data</find>
       <find>rpn</find>
+      <find>log</find>
+      <find>rpn_util</find>
+      <find>base</find>
+      <find>box_p</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -60,7 +56,6 @@
         <option value="$PROJECT_DIR$/test.py" />
         <option value="$PROJECT_DIR$/VOCtrainval/voc2012_parse_xml.py" />
         <option value="$PROJECT_DIR$/reshape_image.py" />
-        <option value="$PROJECT_DIR$/box_parametrize.py" />
         <option value="$PROJECT_DIR$/generate_gt_cls_reg.py" />
         <option value="$PROJECT_DIR$/generate_anchors.py" />
         <option value="$PROJECT_DIR$/npr_model.py" />
@@ -68,14 +63,17 @@
         <option value="$PROJECT_DIR$/rpn.py" />
         <option value="$PROJECT_DIR$/rescale_image.py" />
         <option value="$PROJECT_DIR$/voc2012_parse_xml.py" />
-        <option value="$PROJECT_DIR$/rpn_train.py" />
         <option value="$PROJECT_DIR$/rpn_utilities.py" />
+        <option value="$PROJECT_DIR$/box_parametrize.py" />
+        <option value="$PROJECT_DIR$/rpn_utils.py" />
+        <option value="$PROJECT_DIR$/Fast-R-CNN/fast_rcnn_utils.py" />
+        <option value="$PROJECT_DIR$/rpn_train.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-166" />
-    <option name="y" value="262" />
+    <option name="x" value="-12" />
+    <option name="y" value="-17" />
     <option name="width" value="1298" />
     <option name="height" value="994" />
   </component>
@@ -95,6 +93,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="Scratches" />
       <pane id="ProjectPane">
         <subPane>
@@ -103,11 +102,15 @@
               <item name="Mask R-CNN" type="b2602c69:ProjectViewProjectNode" />
               <item name="Mask R-CNN" type="462c0819:PsiDirectoryNode" />
             </path>
+            <path>
+              <item name="Mask R-CNN" type="b2602c69:ProjectViewProjectNode" />
+              <item name="Mask R-CNN" type="462c0819:PsiDirectoryNode" />
+              <item name="Fast-R-CNN" type="462c0819:PsiDirectoryNode" />
+            </path>
           </expand>
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -125,20 +128,20 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.rpn_utilities">
-    <configuration name="generate_gt_cls_reg" type="PythonConfigurationType" factoryName="Python" temporary="true">
+  <component name="RunManager" selected="Python.fast_rcnn_utils">
+    <configuration name="fast_rcnn_utils" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Fast-R-CNN" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="Mask R-CNN" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/generate_gt_cls_reg.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Fast-R-CNN/fast_rcnn_utils.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -157,24 +160,6 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="Mask R-CNN" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/rescale_image.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-    </configuration>
-    <configuration name="rpn" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="Mask R-CNN" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/rpn.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -216,20 +201,38 @@
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
     </configuration>
+    <configuration name="rpn_utils" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <module name="Mask R-CNN" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/rpn_utils.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+    </configuration>
     <list size="5">
-      <item index="0" class="java.lang.String" itemvalue="Python.generate_gt_cls_reg" />
-      <item index="1" class="java.lang.String" itemvalue="Python.rpn" />
-      <item index="2" class="java.lang.String" itemvalue="Python.rescale_image" />
-      <item index="3" class="java.lang.String" itemvalue="Python.rpn_train" />
-      <item index="4" class="java.lang.String" itemvalue="Python.rpn_utilities" />
+      <item index="0" class="java.lang.String" itemvalue="Python.rescale_image" />
+      <item index="1" class="java.lang.String" itemvalue="Python.rpn_train" />
+      <item index="2" class="java.lang.String" itemvalue="Python.rpn_utilities" />
+      <item index="3" class="java.lang.String" itemvalue="Python.rpn_utils" />
+      <item index="4" class="java.lang.String" itemvalue="Python.fast_rcnn_utils" />
     </list>
     <recent_temporary>
       <list size="5">
-        <item index="0" class="java.lang.String" itemvalue="Python.rpn_utilities" />
-        <item index="1" class="java.lang.String" itemvalue="Python.rpn_train" />
-        <item index="2" class="java.lang.String" itemvalue="Python.rescale_image" />
-        <item index="3" class="java.lang.String" itemvalue="Python.rpn" />
-        <item index="4" class="java.lang.String" itemvalue="Python.generate_gt_cls_reg" />
+        <item index="0" class="java.lang.String" itemvalue="Python.fast_rcnn_utils" />
+        <item index="1" class="java.lang.String" itemvalue="Python.rpn_utils" />
+        <item index="2" class="java.lang.String" itemvalue="Python.rpn_utilities" />
+        <item index="3" class="java.lang.String" itemvalue="Python.rpn_train" />
+        <item index="4" class="java.lang.String" itemvalue="Python.rescale_image" />
       </list>
     </recent_temporary>
   </component>
@@ -254,19 +257,25 @@
       <option name="project" value="LOCAL" />
       <updated>1517777875436</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="fix more bugs">
+      <created>1517777901205</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1517777901205</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="ToolWindowManager">
     <frame x="-9" y="-9" width="1298" height="994" extended-state="6" />
-    <editor active="true" />
     <layout>
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.21902478" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.11510792" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.31272727" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.35757574" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.31272727" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.18545455" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32969698" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
@@ -294,7 +303,7 @@
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/rpn_utilities.py">
+    <entry file="file://$PROJECT_DIR$/Fast-R-CNN/fast_rcnn_utils.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
@@ -304,23 +313,21 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/rpn_utilities.py" />
     <entry file="file://$PROJECT_DIR$/rpn_train.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="928">
           <caret line="47" column="93" lean-forward="false" selection-start-line="47" selection-start-column="93" selection-end-line="47" selection-end-column="93" />
-          <folding>
-            <element signature="e#0#10#0" expanded="false" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/rpn_utilities.py">
+    <entry file="file://$PROJECT_DIR$/rpn_utilities.py" />
+    <entry file="file://$PROJECT_DIR$/rpn_train.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="6003">
-          <caret line="207" column="42" lean-forward="false" selection-start-line="207" selection-start-column="42" selection-end-line="207" selection-end-column="42" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
         </state>
       </provider>
     </entry>
@@ -328,19 +335,7 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#10#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/rpn_train.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#10#0" expanded="false" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
@@ -358,49 +353,24 @@
     <entry file="file://$PROJECT_DIR$/test.py" />
     <entry file="file://$PROJECT_DIR$/VOCtrainval/voc2012_parse_xml.py" />
     <entry file="file://$PROJECT_DIR$/reshape_image.py" />
-    <entry file="file://$PROJECT_DIR$/box_parametrize.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="441">
-          <caret line="65" column="16" lean-forward="false" selection-start-line="65" selection-start-column="16" selection-end-line="65" selection-end-column="16" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/generate_gt_cls_reg.py" />
-    <entry file="file://$PROJECT_DIR$/generate_anchors.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="688">
-          <caret line="43" column="38" lean-forward="true" selection-start-line="43" selection-start-column="38" selection-end-line="43" selection-end-column="38" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/npr_model.py" />
-    <entry file="file://$PROJECT_DIR$/rpn_model.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="80">
-          <caret line="56" column="0" lean-forward="true" selection-start-line="56" selection-start-column="0" selection-end-line="56" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/bbox.py" />
     <entry file="file://$PROJECT_DIR$/rpn.py" />
+    <entry file="file://$PROJECT_DIR$/rpn_utilities.py" />
+    <entry file="file://$PROJECT_DIR$/Fast-R-CNN/bbox_IoU.py" />
     <entry file="file://$PROJECT_DIR$/voc2012_parse_xml.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="87">
-          <caret line="5" column="37" lean-forward="true" selection-start-line="5" selection-start-column="37" selection-end-line="5" selection-end-column="37" />
+        <state relative-caret-position="45">
+          <caret line="5" column="37" lean-forward="false" selection-start-line="5" selection-start-column="37" selection-end-line="5" selection-end-column="37" />
+          <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/rescale_image.py">
+    <entry file="file://$PROJECT_DIR$/rpn_utils.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="103">
-          <caret line="39" column="40" lean-forward="false" selection-start-line="39" selection-start-column="40" selection-end-line="39" selection-end-column="40" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/rpn_utilities.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1462">
-          <caret line="86" column="26" lean-forward="true" selection-start-line="86" selection-start-column="26" selection-end-line="86" selection-end-column="26" />
+        <state relative-caret-position="3968">
+          <caret line="248" column="31" lean-forward="true" selection-start-line="248" selection-start-column="31" selection-end-line="248" selection-end-column="31" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
@@ -409,8 +379,58 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/rpn_train.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="280">
-          <caret line="35" column="50" lean-forward="true" selection-start-line="35" selection-start-column="8" selection-end-line="35" selection-end-column="50" />
+        <state relative-caret-position="-648">
+          <caret line="30" column="43" lean-forward="false" selection-start-line="30" selection-start-column="43" selection-end-line="30" selection-end-column="43" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Fast-R-CNN/fast_rcnn_utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="595">
+          <caret line="66" column="71" lean-forward="false" selection-start-line="66" selection-start-column="71" selection-end-line="66" selection-end-column="71" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/bbox_IoU.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-43">
+          <caret line="5" column="32" lean-forward="true" selection-start-line="5" selection-start-column="18" selection-end-line="5" selection-end-column="32" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/box_parametrize.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-942">
+          <caret line="3" column="20" lean-forward="false" selection-start-line="3" selection-start-column="4" selection-end-line="3" selection-end-column="20" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/generate_anchors.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="903">
+          <caret line="43" column="38" lean-forward="false" selection-start-line="43" selection-start-column="38" selection-end-line="43" selection-end-column="38" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/rescale_image.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="722">
+          <caret line="39" column="40" lean-forward="false" selection-start-line="39" selection-start-column="40" selection-end-line="39" selection-end-column="40" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/rpn_model.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="848">
+          <caret line="56" column="0" lean-forward="false" selection-start-line="56" selection-start-column="0" selection-end-line="56" selection-end-column="0" />
           <folding />
         </state>
       </provider>

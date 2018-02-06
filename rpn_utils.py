@@ -147,6 +147,8 @@ def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda=False):
     for i in range(0, num_anchors):
         cls_score[:, (2 * i, 2 * i + 1), :, :] = \
             softmax(cls_score[:, (2 * i, 2 * i + 1), :, :])
+    # clamp softmax result to avoid numeric error
+    cls_score = torch.clamp(cls_score, min=1e-12, max=1-1e-12)
     minus_log_cls_score = torch.mul(torch.log(cls_score), -1)
 
     # calculate cross-entropy loss of class scores
@@ -192,7 +194,6 @@ def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda=False):
 
 
 if __name__ == "__main__":
-    import os
     import cv2
     from rescale_image import rescale_image
 
@@ -207,7 +208,6 @@ if __name__ == "__main__":
     img_box_dict = np.load('../VOCdevkit/img_box_dict.npy')[()]
     for img_dir, img_info in img_box_dict.items():
         image, modified_image_info = rescale_image(img_dir, img_info)
-
         cls_score_dim = np.array([np.floor(modified_image_info['img_size'][0]/16).astype(np.int),
                               np.floor(modified_image_info['img_size'][1]/16).astype(np.int)])
         base_size = 16
@@ -215,7 +215,7 @@ if __name__ == "__main__":
         scales = [8, 16, 32]
         one_hot_label, gt_box = generate_gt_cls_reg(img_info, cls_score_dim, base_size, ratios, scales)
         # draw ground truth boxes on image
-        for object in img_info['objects']:
+        for object in modified_image_info['objects']:
             ymin, xmin, ymax, xmax = [int(i) for i in object[1:5]]
             cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
             cv2.putText(image,
