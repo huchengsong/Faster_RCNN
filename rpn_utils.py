@@ -187,8 +187,7 @@ def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda=False):
     reg_mask = Variable(torch.from_numpy(reg_mask).type(torch.FloatTensor))
     if cuda:
         reg_mask = reg_mask.cuda()
-    sum_reg_loss = torch.sum(
-        torch.div(torch.mul(reg_mask, sum_reg_loss), 4))
+    sum_reg_loss = torch.sum(torch.mul(reg_mask, sum_reg_loss))
     reg_loss = torch.mul(torch.div(sum_reg_loss, n_reg), 10)
     return torch.add(cls_loss, reg_loss)
 

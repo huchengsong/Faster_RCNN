@@ -10,23 +10,7 @@ class RPN(nn.Module):
     def __init__(self, model_name, anchor_num):
         super(RPN, self).__init__()
         # load pre-trained model and remove the last layer
-        # Note: weights not initialized at described in the Faster R-CNN paper
-        if model_name == 'resnet50':
-            self.model = models.resnet50(pretrained=True)
-            modules = list(self.model.children())[:-2]
-            self.model = nn.Sequential(*modules)
-
-            for param in self.model.parameters():
-                param.requires_grad = True
-
-            # prediction head for classes and bounding boxes
-            self.conv_shared = nn.Conv2d(2048, 512,
-                                         (3, 3), stride=1,
-                                         padding=1, bias=True)
-            self.conv_reg = nn.Conv2d(512, 4*anchor_num, (1, 1),
-                                      stride=1, padding=0, bias=True)
-            self.conv_cls = nn.Conv2d(512, 2*anchor_num, (1, 1),
-                                      stride=1, padding=0, bias=True)
+        # Note: weights not initialized as described in the Faster R-CNN paper
 
         if model_name == 'vgg16':
             self.model = models.vgg16(pretrained=True)
@@ -57,5 +41,5 @@ class RPN(nn.Module):
 
 if __name__ == "__main__":
     # Create network
-    net = RPN('resnet50')
+    net = RPN('vgg16', 9)
     print(net)

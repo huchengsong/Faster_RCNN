@@ -39,3 +39,12 @@ if __name__ == '__main__':
     roi_pool_result = roi_pooling(img_info, region_proposals, feature_map)
     print(feature_map)
     print(roi_pool_result)
+
+    feature_map = np.array([[0, 0, 0, 0], [0, 10, 0, 15], [0, 15, 0, 0], [0, 0, 15, 0]]).astype(np.float)
+    feature_map = np.expand_dims(np.expand_dims(feature_map, axis=0), axis=0)
+    feature_map = Variable(torch.from_numpy(feature_map))
+    img_info = {'img_size': [400, 400]}
+    region_proposals = np.array([[0, 0, 400, 400], [0, 0, 200, 200], [0, 0, 300, 300]])
+    roi_pool_result = roi_pooling(img_info, region_proposals, feature_map)
+    print(feature_map)
+    print(roi_pool_result)
