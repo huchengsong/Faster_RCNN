@@ -33,7 +33,6 @@ def train_rpn(img_dict_dir, epoch=1, cuda=False):
 
     for i in range(epoch):
         for img_dir, img_info in img_dict.items():
-            print(img_dir)
             img, modified_img_info = rescale_image(img_dir, img_info)
             # normalize
             normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
