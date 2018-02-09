@@ -58,26 +58,26 @@ def generate_loss(class_pred, bbox_pred, label_gt, bbox_gt, cuda=False):
     cross_entropy_loss = nn.CrossEntropyLoss()
     gt_label = Variable(torch.from_numpy(label_gt)).type(torch.LongTensor)
     if cuda:
-        gt_label.cuda()
+        gt_label = gt_label.cuda()
     class_loss = cross_entropy_loss(class_pred, gt_label)
 
     # bounding box smooth L1 loss
     proposal_num, class_num = class_pred.size()[0:2]
     bbox_gt = Variable(torch.from_numpy(bbox_gt)).type(torch.FloatTensor)
     if cuda:
-        bbox_gt.cuda()
+        bbox_gt = bbox_gt.cuda()
 
     mask_not_background = np.repeat(np.expand_dims(label_gt > 0, axis=1), 4, axis=1).astype(np.uint8)
     mask_not_background = Variable(torch.from_numpy(mask_not_background)).type(torch.FloatTensor)
     if cuda:
-        mask_not_background.cuda()
+        mask_not_background = mask_not_background.cuda()
 
     ind_bbox_at_gt = np.zeros((proposal_num, 4 * class_num)).astype(np.uint8)
     for i in range(proposal_num):
         ind_bbox_at_gt[i, label_gt[i] * 4:(label_gt[i] + 1) * 4] = 1
     ind_bbox_at_gt = Variable(torch.from_numpy(ind_bbox_at_gt)).type(torch.ByteTensor)
     if cuda:
-        ind_bbox_at_gt.cuda()
+        ind_bbox_at_gt = ind_bbox_at_gt.cuda()
     bbox_pred_at_gt = bbox_pred[ind_bbox_at_gt].view(proposal_num, 4)
 
     # calculate loss
