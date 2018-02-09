@@ -67,8 +67,8 @@ def generate_gt_cls_reg(img_info, score_dim, base_size, ratios, scales):
 
     # batch size 256. ratio of positive and negative anchors 1:1
     # if positive anchors are too many, reduce the positive anchor number
-    ind_positive_anchor = np.where(labels == 1)
-    num_positive_anchor = len(ind_positive_anchor)
+    ind_positive_anchor = np.squeeze(np.array(np.where(labels == 1)))
+    num_positive_anchor = ind_positive_anchor.shape[0]
     if num_positive_anchor > BATCH_SIZE / 2:
         disable_inds = np.random.choice(
             ind_positive_anchor,
@@ -78,15 +78,17 @@ def generate_gt_cls_reg(img_info, score_dim, base_size, ratios, scales):
 
     # if negative anchors are too many, reduce the negative anchor number
     # if positive anchors are not enough, pad with negative anchors
-    ind_negative_anchor = np.where(labels == -1)
-    num_negative_anchor = len(ind_negative_anchor)
-    if num_negative_anchor > max(BATCH_SIZE / 2, BATCH_SIZE - num_positive_anchor):
+    ind_negative_anchor = np.squeeze(np.array(np.where(labels == -1)))
+    print(ind_negative_anchor)
+    num_negative_anchor = ind_negative_anchor.shape[0]
+    print(num_negative_anchor)
+    if num_negative_anchor > BATCH_SIZE - num_positive_anchor:
         disable_inds = np.random.choice(
             ind_negative_anchor,
-            size=int(num_negative_anchor - max(BATCH_SIZE / 2, BATCH_SIZE - num_positive_anchor)),
+            size=int(num_negative_anchor - (BATCH_SIZE - num_positive_anchor)),
             replace=False)
         labels[disable_inds] = 0
-
+    print(labels)
     gt_box_parameterized = box_parameterize(
         ground_truth_boxes[ind_max_each_anchor, :], selected_anchors)
 
