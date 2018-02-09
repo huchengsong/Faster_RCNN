@@ -23,10 +23,10 @@ class Fast_RCNN(nn.Module):
                 param.requires_grad = True
 
             # prediction head for classes and bounding boxes
-            self.shared_fc_1 = nn.Linear(512 * MAX_POOL_OUTPUT_SIZE[0] * MAX_POOL_OUTPUT_SIZE[1], 4096)
-            self.shared_fc_2 = nn.Linear(4096, 4096)
-            self.class_fc = nn.Linear(4096, CLASS_NUM)
-            self.bbox_fc = nn.Linear(4096, CLASS_NUM * 4)
+            self.shared_fc_1 = nn.Linear(512 * MAX_POOL_OUTPUT_SIZE[0] * MAX_POOL_OUTPUT_SIZE[1], 512)
+            self.shared_fc_2 = nn.Linear(512, 256)
+            self.class_fc = nn.Linear(256, CLASS_NUM)
+            self.bbox_fc = nn.Linear(256, CLASS_NUM * 4)
             self.softmax = nn.Softmax(dim=0)
 
     def forward(self, x, img_info, region_proposals):

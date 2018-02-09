@@ -12,8 +12,7 @@ from torch.autograd import Variable
 from rescale_image import rescale_image
 from fast_rcnn_model import Fast_RCNN
 from voc2012_parse_xml import voc2012_generate_img_box_dict
-from fast_rcnn_utils import generate_loss
-from fast_rcnn_utils import generate_gt
+from fast_rcnn_utils import generate_loss, generate_gt
 
 MODEL_NAME = 'vgg16'
 
@@ -37,7 +36,7 @@ def train_fast_rcnn(img_dict_dir, epoch=1, cuda=False):
             img = torch.unsqueeze(img, 0)
             if cuda == 1:
                 img = img.cuda()
-            region_proposals = generate_region_proposals(img_info)
+            region_proposals = generate_test_region_proposals(img_info)
             print(len(region_proposals))
             class_pred, bbox_pred = net(img, img_info, region_proposals)
             label_gt, bbox_gt = generate_gt(img_info, region_proposals)
@@ -55,7 +54,7 @@ def train_fast_rcnn(img_dict_dir, epoch=1, cuda=False):
         torch.save(net, file_path)
 
 
-def generate_region_proposals(img_info):
+def generate_test_region_proposals(img_info):
     from generate_anchors import generate_anchors
     H, W = img_info['img_size']
     base_size = 16
@@ -74,6 +73,7 @@ def generate_region_proposals(img_info):
     all_anchors[:, 2] = np.maximum(all_anchors[:, 2], H)
     all_anchors[:, 3] = np.maximum(all_anchors[:, 3], W)
     return all_anchors
+
 
 def show_result(img_info, image):
     """
@@ -97,7 +97,7 @@ def show_result(img_info, image):
 
 
 if __name__ == '__main__':
-    if not os.path.isdir('../../VOCdevkit'):
+    if not os.path.isdir('../VOCdevkit'):
         url = 'http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar'
         print('downloading VOCtrainval_11-May-2012.tar')
 
@@ -117,24 +117,24 @@ if __name__ == '__main__':
                              (percent, progress_size / (1024 * 1024), speed, duration))
             sys.stdout.flush()
 
-        urllib.request.urlretrieve(url, '../../VOCtrainval_11-May-2012.tar', progress)
+        urllib.request.urlretrieve(url, '../VOCtrainval_11-May-2012.tar', progress)
         print('done')
 
         # extract files
         print('extracting...')
-        tar = tarfile.open('../../VOCtrainval_11-May-2012.tar')
-        tar.extractall('../../')
+        tar = tarfile.open('../VOCtrainval_11-May-2012.tar')
+        tar.extractall('../')
         tar.close()
         print('done')
 
-    if not os.path.isfile('../../VOCdevkit/img_box_dict.npy'):
+    if not os.path.isfile('../VOCdevkit/img_box_dict.npy'):
         # create image bounding box ground truth dictionary
-        xml_dir = '../../VOCdevkit/VOC2012/Annotations'
-        img_dir = '../../VOCdevkit/VOC2012/JPEGImages'
-        save_dir = '../../VOCdevkit/img_box_dict.npy'
+        xml_dir = '../VOCdevkit/VOC2012/Annotations'
+        img_dir = '../VOCdevkit/VOC2012/JPEGImages'
+        save_dir = '../VOCdevkit/img_box_dict.npy'
         img_box_dict = voc2012_generate_img_box_dict(xml_dir, img_dir)
         np.save(save_dir, img_box_dict)
 
-    train_fast_rcnn('../../VOCdevkit/img_box_dict.npy', epoch=3, cuda=torch.cuda.is_available())
+    train_fast_rcnn('../VOCdevkit/img_box_dict.npy', epoch=3, cuda=torch.cuda.is_available())
 
 
