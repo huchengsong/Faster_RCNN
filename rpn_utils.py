@@ -60,14 +60,13 @@ def generate_gt_cls_reg(img_info, score_dim, base_size, ratios, scales):
     # set 1 to the anchors that have the highest IoU with a ground-truth box
     # overwrite -1s for the anchors that have <0.3 IoU but have the highest IoU for a gt box
     ind_max_iou_with_gt = np.argmax(iou_matrix, axis=1)
-    print(ind_max_iou_with_gt)
     max_iou_with_gt = iou_matrix[np.arange(ground_truth_boxes.shape[0]), ind_max_iou_with_gt]
     ind_max_iou_with_gt = np.where(np.transpose(iou_matrix) == max_iou_with_gt)[0]
     labels[ind_max_iou_with_gt] = 1
 
     # batch size 256. ratio of positive and negative anchors 1:1
     # if positive anchors are too many, reduce the positive anchor number
-    ind_positive_anchor = np.squeeze(np.array(np.where(labels == 1)))
+    ind_positive_anchor = np.array(np.where(labels == 1)).flatten()
     num_positive_anchor = ind_positive_anchor.shape[0]
     if num_positive_anchor > BATCH_SIZE / 2:
         disable_inds = np.random.choice(
@@ -78,17 +77,16 @@ def generate_gt_cls_reg(img_info, score_dim, base_size, ratios, scales):
 
     # if negative anchors are too many, reduce the negative anchor number
     # if positive anchors are not enough, pad with negative anchors
-    ind_negative_anchor = np.squeeze(np.array(np.where(labels == -1)))
-    print(ind_negative_anchor)
+    ind_negative_anchor = np.array(np.where(labels == -1)).flatten()
     num_negative_anchor = ind_negative_anchor.shape[0]
-    print(num_negative_anchor)
     if num_negative_anchor > BATCH_SIZE - num_positive_anchor:
         disable_inds = np.random.choice(
             ind_negative_anchor,
             size=int(num_negative_anchor - (BATCH_SIZE - num_positive_anchor)),
             replace=False)
         labels[disable_inds] = 0
-    print(labels)
+    print(np.sum(labels == 1))
+    print(np.sum(labels == -1))
     gt_box_parameterized = box_parameterize(
         ground_truth_boxes[ind_max_each_anchor, :], selected_anchors)
 
