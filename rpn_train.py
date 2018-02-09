@@ -51,10 +51,12 @@ def train_rpn(img_dict_dir, epoch=1, cuda=False):
             optimizer.step()
 
             img_index = img_index+1
+            if img_index % 5000 ==0:
+                file_path = os.path.join("rpn_trained.pkl")
+                torch.save(net, file_path)
         img_index = 0
-
-    file_path = os.path.join("rpn_trained.pkl")
-    torch.save(net, file_path)
+        file_path = os.path.join("rpn_trained.pkl")
+        torch.save(net, file_path)
 
 
 def show_result(img_info, gt_label, score_dim, base_size, ratios, scales):

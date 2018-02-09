@@ -57,12 +57,12 @@ def train_fast_rcnn(img_dict_dir, epoch=1, cuda=False):
 def generate_test_region_proposals(img_info):
     from generate_anchors import generate_anchors
     H, W = img_info['img_size']
-    base_size = 16
-    ratios = [0.5, 1.0, 2.0]
+    base_size = 32
+    ratios = [1.0]
     scales = [8, 16, 32]
     anchor_list = generate_anchors(base_size, ratios, scales)
-    anchor_x_shift = np.arange(0, int(W/64)) * base_size + base_size / 2
-    anchor_y_shift = np.arange(0, int(H/64)) * base_size + base_size / 2
+    anchor_x_shift = np.arange(0, int(W/base_size)) * base_size + base_size / 2
+    anchor_y_shift = np.arange(0, int(H/base_size)) * base_size + base_size / 2
     anchor_centers = np.array([[i, j]
                                for i in anchor_y_shift
                                for j in anchor_x_shift])
@@ -70,8 +70,8 @@ def generate_test_region_proposals(img_info):
                             for i in range(0, anchor_centers.shape[0])
                             for j in range(0, anchor_list.shape[0])])
     all_anchors[:, 0:2] = np.maximum(all_anchors[:, 0:2], 0)
-    all_anchors[:, 2] = np.maximum(all_anchors[:, 2], H)
-    all_anchors[:, 3] = np.maximum(all_anchors[:, 3], W)
+    all_anchors[:, 2] = np.minimum(all_anchors[:, 2], H)
+    all_anchors[:, 3] = np.minimum(all_anchors[:, 3], W)
     return all_anchors
 
 

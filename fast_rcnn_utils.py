@@ -94,9 +94,9 @@ def generate_loss(class_pred, bbox_pred, label_gt, bbox_gt, cuda=False):
                                           torch.mul(torch.pow(abs_diff_pred_gt, 2), 0.5))
 
     bbox_loss = torch.add(loss_larger_than_one, loss_smaller_than_one)
-    bbox_lost = torch.sum(torch.mul(mask_not_background, bbox_loss))
+    bbox_loss = torch.sum(torch.mul(mask_not_background, bbox_loss))
 
-    return torch.add(class_loss, bbox_lost)
+    return torch.add(class_loss, bbox_loss)
 
 
 if __name__ == "__main__":
@@ -104,10 +104,13 @@ if __name__ == "__main__":
 
     import cv2
     from rescale_image import rescale_image
+    from fast_rcnn_train import generate_test_region_proposals
+    np.set_printoptions(threshold=np.nan)
 
-    img_box_dict = np.load('../../VOCdevkit/img_box_dict.npy')[()]
+    img_box_dict = np.load('../VOCdevkit/img_box_dict.npy')[()]
     for img_dir, img_info in img_box_dict.items():
-        image, image_info = rescale_image('../'+img_dir, img_info)
+        image, image_info = rescale_image(img_dir, img_info)
+        test_proposals = generate_test_region_proposals(img_info)
         label, gt_box_parameterized = generate_gt(image_info, test_proposals)
         print(label, gt_box_parameterized)
         for object in image_info['objects']:
