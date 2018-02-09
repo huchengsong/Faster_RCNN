@@ -79,10 +79,10 @@ def generate_gt_cls_reg(img_info, score_dim, base_size, ratios, scales):
     # if positive anchors are not enough, pad with negative anchors
     ind_negative_anchor = np.array(np.where(labels == -1)).flatten()
     num_negative_anchor = ind_negative_anchor.size
-    if num_negative_anchor > BATCH_SIZE - num_positive_anchor:
+    if num_negative_anchor > max(BATCH_SIZE - num_positive_anchor, BATCH_SIZE / 2):
         disable_inds = np.random.choice(
             ind_negative_anchor,
-            size=int(num_negative_anchor - (BATCH_SIZE - num_positive_anchor)),
+            size=int(num_negative_anchor - max(BATCH_SIZE - num_positive_anchor, BATCH_SIZE / 2)),
             replace=False)
         labels[disable_inds] = 0
     print(np.sum(labels == 1), np.sum(labels == -1))
