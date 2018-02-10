@@ -10,6 +10,7 @@ from generate_anchors import generate_anchors
 from rescale_image import rescale_image
 from box_parametrize import box_deparameterize
 
+np.set_printoptions(threshold=np.inf)
 BASE_SIZE = 16
 RATIOS = [0.5, 1.0, 2.0]
 SCALES = [8, 16, 32]
@@ -67,13 +68,6 @@ def show_rpn_result(img_dict_dir, model_dir, top_num, base_size, ratios, scales,
             order='C')
         all_anchors = np.transpose(all_anchors, (0, 3, 1, 2))
 
-        def largest_indices(ary, n):
-            """Returns the n largest indices from a numpy array."""
-            flat = ary.flatten()
-            indices = np.argpartition(flat, -n)[-n:]
-            indices = indices[np.argsort(-flat[indices])]
-            return np.unravel_index(indices, ary.shape)
-
         # indices of the largest n score
         indices = largest_indices(cls_score_positive, top_num)
         reg_top = np.column_stack((reg_score[indices[0], 4 * indices[1], indices[2], indices[3]],
@@ -84,10 +78,8 @@ def show_rpn_result(img_dict_dir, model_dir, top_num, base_size, ratios, scales,
                                       all_anchors[indices[0], 4 * indices[1] + 1, indices[2], indices[3]],
                                       all_anchors[indices[0], 4 * indices[1] + 2, indices[2], indices[3]],
                                       all_anchors[indices[0], 4 * indices[1] + 3, indices[2], indices[3]]))
-        print(reg_top)
-        print(anchor_top)
         pred_boxex = box_deparameterize(reg_top, anchor_top)
-        print(pred_boxex)
+
 
         # draw ground truth box on image
         for object in img_info['objects']:
@@ -122,10 +114,18 @@ def show_rpn_result(img_dict_dir, model_dir, top_num, base_size, ratios, scales,
         cv2.destroyAllWindows()
 
 
+def largest_indices(ary, n):
+    """Returns the n largest indices from a numpy array."""
+    flat = ary.flatten()
+    indices = np.argpartition(flat, -n)[-n:]
+    indices = indices[np.argsort(-flat[indices])]
+    return np.unravel_index(indices, ary.shape)
+
+
 if __name__ == '__main__':
     model_dir = 'rpn_trained.pkl'
     img_dict_dir = '../VOCdevkit/img_box_dict.npy'
-    top_num = 20
+    top_num = 200
     show_rpn_result(img_dict_dir,
                     model_dir,
                     top_num,

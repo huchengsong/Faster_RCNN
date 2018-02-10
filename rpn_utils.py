@@ -99,7 +99,7 @@ def generate_gt_cls_reg(img_info, score_dim, base_size, ratios, scales):
     one_hot_labels[:, [2 * k for k in range(anchor_list.shape[0])], :, :] = \
         one_hot_labels[:, [2 * k for k in range(anchor_list.shape[0])], :, :] == 1
     one_hot_labels[:, [2 * k + 1 for k in range(anchor_list.shape[0])], :, :] = \
-        one_hot_labels[:, [2 * k +1 for k in range(anchor_list.shape[0])], :, :] == -1
+        one_hot_labels[:, [2 * k + 1 for k in range(anchor_list.shape[0])], :, :] == -1
 
     gt_box_parameterized = _unmap(gt_box_parameterized, num_all_anchors, inds_inside_img, fill=0)
     gt_box_parameterized = np.reshape(
@@ -186,8 +186,9 @@ def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda=False):
     reg_mask = Variable(torch.from_numpy(reg_mask).type(torch.FloatTensor))
     if cuda:
         reg_mask = reg_mask.cuda()
-    sum_reg_loss = torch.sum(torch.mul(reg_mask, sum_reg_loss))
-    reg_loss = torch.mul(torch.div(sum_reg_loss, n_reg), 10)
+    reg_loss = torch.sum(torch.mul(reg_mask, sum_reg_loss))
+    reg_loss = torch.mul(torch.div(reg_loss, n_reg), 10)
+    print(cls_loss)
     return torch.add(cls_loss, reg_loss)
 
 
@@ -205,15 +206,15 @@ if __name__ == "__main__":
     # test generate_gt_cls_reg
     img_box_dict = np.load('../VOCdevkit/img_box_dict.npy')[()]
     for img_dir, img_info in img_box_dict.items():
-        image, modified_image_info = rescale_image(img_dir, img_info)
-        cls_score_dim = np.array([np.floor(modified_image_info['img_size'][0]/16).astype(np.int),
-                              np.floor(modified_image_info['img_size'][1]/16).astype(np.int)])
+        image, image_info = rescale_image(img_dir, img_info)
         base_size = 16
         ratios = [0.5, 1.0, 2.0]
         scales = [8, 16, 32]
-        one_hot_label, gt_box = generate_gt_cls_reg(img_info, cls_score_dim, base_size, ratios, scales)
+        score_dim = np.array([np.floor(image_info['img_size'][0] / base_size).astype(np.int),
+                              np.floor(image_info['img_size'][1] / base_size).astype(np.int)])
+        one_hot_label, gt_box = generate_gt_cls_reg(image_info, score_dim, base_size, ratios, scales)
         # draw ground truth boxes on image
-        for object in modified_image_info['objects']:
+        for object in image_info['objects']:
             ymin, xmin, ymax, xmax = [int(i) for i in object[1:5]]
             cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
             cv2.putText(image,
@@ -224,9 +225,9 @@ if __name__ == "__main__":
 
         # generate anchors
         anchor_list = generate_anchors(base_size=base_size, ratios=ratios, scales=scales)
-        anchor_x_shift = np.arange(0, cls_score_dim[1]) * \
+        anchor_x_shift = np.arange(0, score_dim[1]) * \
                      base_size + base_size / 2
-        anchor_y_shift = np.arange(0, cls_score_dim[0]) * \
+        anchor_y_shift = np.arange(0, score_dim[0]) * \
                      base_size + base_size / 2
         anchor_centers = np.array([[i, j]
                                for i in anchor_y_shift
@@ -236,7 +237,7 @@ if __name__ == "__main__":
                             for j in range(0, anchor_list.shape[0])])
         all_anchors = np.reshape(
             all_anchors,
-            [1, cls_score_dim[0], cls_score_dim[1], 4 * anchor_list.shape[0]],
+            [1, score_dim[0], score_dim[1], 4 * anchor_list.shape[0]],
             order='C')
         all_anchors = np.transpose(all_anchors, (0, 3, 1, 2))
         # print('positive: ', np.sum(label == 1))
@@ -245,8 +246,8 @@ if __name__ == "__main__":
         # print(all_anchors.shape)
 
         # draw positive anchors
-        for i in range(cls_score_dim[0]):
-            for j in range(cls_score_dim[1]):
+        for i in range(score_dim[0]):
+            for j in range(score_dim[1]):
                 for k in range(len(ratios)*len(scales)):
                     if one_hot_label[0, 2 * k, i, j] == 1:
                         anchor = all_anchors[0, k*4:(k+1)*4, i, j]
