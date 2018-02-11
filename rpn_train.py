@@ -27,7 +27,7 @@ def train_rpn(img_dict_dir, epoch=1, cuda=False):
     net = RPN(MODEL_NAME, len(RATIOS) * len(SCALES))
     if cuda == 1:
         net.cuda()
-    optimizer = optim.Adam(net.parameters(), lr=0.0001)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=0.0001)
     print(net)
 
     for i in range(epoch):
@@ -98,6 +98,6 @@ if __name__ == '__main__':
         img_box_dict = voc2012_generate_img_box_dict(xml_dir, img_dir)
         np.save(save_dir, img_box_dict)
 
-    train_rpn('../VOCdevkit/img_box_dict.npy', epoch=3, cuda=torch.cuda.is_available())
+    train_rpn('../VOCdevkit/img_box_dict.npy', epoch=5, cuda=torch.cuda.is_available())
 
 

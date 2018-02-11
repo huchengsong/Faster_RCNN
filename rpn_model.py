@@ -19,8 +19,8 @@ class RPN(nn.Module):
 
             # requires_grad = False for the first few layers
             for i in range(17):
-                self.model[0][i].requires_grad = False
-
+                for param in self.model[0][i].parameters():
+                    param.requires_grad = False
             # prediction head for classes and bounding boxes
             self.conv_shared = nn.Conv2d(512, 512,
                                          (3, 3), stride=1,
@@ -44,4 +44,5 @@ if __name__ == "__main__":
     # Create network
     net = RPN('vgg16', 9)
     print(net)
+
 
