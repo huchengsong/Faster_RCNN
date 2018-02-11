@@ -46,7 +46,7 @@ def train_rpn(img_dict_dir, epoch=1, cuda=False):
             cls_gt, reg_gt = rpn_utils.generate_gt_cls_reg(modified_img_info, score_dim, BASE_SIZE, RATIOS, SCALES)
 
             loss = rpn_utils.generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda)
-            print('image: {}/{}, loss: {}'.format(img_index, img_num, loss.data[0]))
+            print('epoch: {} image: {}/{}, loss: {}'.format(i, img_index, img_num, loss.data[0]))
             loss.backward()
             optimizer.step()
 

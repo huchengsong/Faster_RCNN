@@ -80,6 +80,19 @@ def show_rpn_result(img_dict_dir, model_dir, top_num, base_size, ratios, scales,
                                       all_anchors[indices[0], 4 * indices[1] + 3, indices[2], indices[3]]))
         pred_boxex = box_deparameterize(reg_top, anchor_top)
 
+        # from rpn_utils import generate_gt_cls_reg
+        # one_hot_label, gt_box_parameterized = generate_gt_cls_reg(modified_img_info, score_dim, base_size, ratios, scales)
+        # for i in range(score_dim[0]):
+        #     for j in range(score_dim[1]):
+        #         for k in range(len(ratios)*len(scales)):
+        #             if one_hot_label[0, 2 * k, i, j] == 1:
+        #                 anchor = all_anchors[0, k*4:(k+1)*4, i, j]
+        #                 ymin, xmin, ymax, xmax = [int(i) for i in anchor]
+        #                 color = np.squeeze([np.random.randint(255, size=1),
+        #                                     np.random.randint(255, size=1),
+        #                                     np.random.randint(255, size=1)]).tolist()
+        #                 cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color, 1)
+
 
         # draw ground truth box on image
         for object in img_info['objects']:
@@ -125,7 +138,7 @@ def largest_indices(ary, n):
 if __name__ == '__main__':
     model_dir = 'rpn_trained.pkl'
     img_dict_dir = '../VOCdevkit/img_box_dict.npy'
-    top_num = 200
+    top_num = 10
     show_rpn_result(img_dict_dir,
                     model_dir,
                     top_num,

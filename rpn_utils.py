@@ -240,10 +240,23 @@ if __name__ == "__main__":
             [1, score_dim[0], score_dim[1], 4 * anchor_list.shape[0]],
             order='C')
         all_anchors = np.transpose(all_anchors, (0, 3, 1, 2))
-        # print('positive: ', np.sum(label == 1))
-        # print('zero', np.sum(label == 0))
-        # print('negative', np.sum(label == -1))
-        # print(all_anchors.shape)
+
+        # # test box_deparameterize function
+        # from box_parametrize import box_deparameterize
+        # for i in range(score_dim[0]):
+        #     for j in range(score_dim[1]):
+        #         for k in range(len(ratios)*len(scales)):
+        #             if one_hot_label[0, 2 * k, i, j] == 1:
+        #                 anchor = all_anchors[0, k*4:(k+1)*4, i, j]
+        #                 gt = gt_box[0, k*4:(k+1)*4, i, j]
+        #                 anchor_2 = box_deparameterize(gt, anchor)
+        #                 anchor_2 = np.squeeze(anchor_2)
+        #                 ymin, xmin, ymax, xmax = [int(i) for i in anchor_2]
+        #                 color = np.squeeze([np.random.randint(255, size=1),
+        #                                     np.random.randint(255, size=1),
+        #                                     np.random.randint(255, size=1)]).tolist()
+        #                 cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 1)
+
 
         # draw positive anchors
         for i in range(score_dim[0]):

@@ -35,6 +35,10 @@ def box_deparameterize(input_boxes, base_boxes):
     :return: de-parameterized boxes based on base_boxes
 
     """
+    # make input matrix 2d array
+    input_boxes = input_boxes.reshape((-1, 4))
+    base_boxes = base_boxes.reshape((-1, 4))
+
     base_boxes_height = base_boxes[:, 2] - base_boxes[:, 0] + 1
     base_boxes_width = base_boxes[:, 3] - base_boxes[:, 1] + 1
     base_boxes_ctr_y = (base_boxes[:, 2] + base_boxes[:, 0]) / 2
