@@ -17,8 +17,9 @@ class RPN(nn.Module):
             self.model.features = nn.Sequential(*list(self.model.features)[:-1])
             self.model = nn.Sequential(*list(self.model.children())[:-1])
 
-            for param in self.model.parameters():
-                param.requires_grad = True
+            # requires_grad = False for the first few layers
+            for i in range(17):
+                self.model[0][i].requires_grad = False
 
             # prediction head for classes and bounding boxes
             self.conv_shared = nn.Conv2d(512, 512,
@@ -43,3 +44,4 @@ if __name__ == "__main__":
     # Create network
     net = RPN('vgg16', 9)
     print(net)
+

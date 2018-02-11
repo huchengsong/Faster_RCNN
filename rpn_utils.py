@@ -14,7 +14,7 @@ BATCH_SIZE = 256
 def generate_gt_cls_reg(img_info, score_dim, base_size, ratios, scales):
     """
     :param img_info: dictionary with key ('img_size', 'objects')
-    :param cls_score_dim: (H, W) of the class score matrix
+    :param score_dim: (H, W) of the class score matrix
     :param base_size: stride size of anchor on an image
     :param scales: scales of anchors
     :return: labels: (1, 2 * num_ratio * num_scale, H, W)

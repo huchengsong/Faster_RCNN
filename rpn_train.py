@@ -10,7 +10,6 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 from rescale_image import rescale_image
-from generate_anchors import generate_anchors
 from rpn_model import RPN
 from voc2012_parse_xml import voc2012_generate_img_box_dict
 import rpn_utils
@@ -35,6 +34,7 @@ def train_rpn(img_dict_dir, epoch=1, cuda=False):
         for img_dir, img_info in img_dict.items():
             optimizer.zero_grad()
             img, modified_img_info = rescale_image(img_dir, img_info)
+
             # normalize
             normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             img = Variable(normalize(torch.from_numpy(np.transpose(img / 255, (2, 0, 1))))).float()

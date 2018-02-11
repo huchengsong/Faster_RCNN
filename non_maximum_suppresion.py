@@ -11,6 +11,7 @@ def non_maximum_suppression(box_scores, bboxes, class_list, score_threshold=0.5,
     """
     class_pred = np.argmax(box_scores, axis=1)
     box_selected = []
+    box_score = []
     class_label = []
     for class_id in class_list:
         index = np.where(class_pred == class_id)
@@ -55,9 +56,10 @@ def non_maximum_suppression(box_scores, bboxes, class_list, score_threshold=0.5,
                     suppression.append(i)
             idx_sorted = np.delete(idx_sorted, suppression)
             box_selected.append(box_candidate_above_threshold[ind_largest_score])
+            box_score.append(score_candidate_above_threshold[ind_largest_score])
             class_label.append(class_id)
 
-    return np.array(class_label), np.array(box_selected)
+    return np.array(class_label), np.array(box_score), np.array(box_selected)
 
 
 if __name__ == '__main__':
@@ -76,6 +78,6 @@ if __name__ == '__main__':
                        [0, 0, 150, 150],
                        [500, 500, 600, 600],
                        [500, 500, 650, 650]])
-    class_label, box = non_maximum_suppression(box_scores, bboxes, [0,1,2], score_threshold=0, iou_threshold=0.5)
-    print(class_label, box)
+    class_label, box_score, box = non_maximum_suppression(box_scores, bboxes, [0,1,2], score_threshold=0, iou_threshold=0.5)
+    print(class_label, box_score, box)
 
