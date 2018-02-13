@@ -58,8 +58,8 @@ def generate_rpn_proposals(img_tensor, rpn_model, base_size, ratios, scales, sco
                             for j in range(0, anchor_list.shape[0])])
 
     # transform to numpy array
-    cls_score = cls_score.data.numpy()
-    reg_score = reg_score.data.numpy()
+    cls_score = cls_score.data.cpu().numpy()
+    reg_score = reg_score.data.cpu().numpy()
 
     # reshape
     cls_score = np.reshape(np.transpose(cls_score, (0, 2, 3, 1)), (-1, 2), order='C')
