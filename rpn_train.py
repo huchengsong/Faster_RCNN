@@ -59,7 +59,7 @@ def train_rpn(img_dict_dir, epoch=1, cuda=False):
         torch.save(net, file_path)
 
 
-if __name__ == '__main__':
+def main():
     if not os.path.isdir('../VOCdevkit'):
         url = 'http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar'
         print('downloading VOCtrainval_11-May-2012.tar')
@@ -101,3 +101,5 @@ if __name__ == '__main__':
     train_rpn('../VOCdevkit/img_box_dict.npy', epoch=5, cuda=torch.cuda.is_available())
 
 
+if __name__ == '__main__':
+    main()

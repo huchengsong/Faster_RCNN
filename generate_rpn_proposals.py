@@ -16,10 +16,10 @@ RATIOS = [0.5, 1.0, 2.0]
 SCALES = [8, 16, 32]
 
 
-def generate_rpn_proposals(img, rpn_model, base_size, ratios, scales, score_threshold=0.5, iou_threshold=0.5, cuda=0):
+def generate_rpn_proposals(img_tensor, rpn_model, base_size, ratios, scales, score_threshold=0.3, iou_threshold=0.7, cuda=0):
     """
     generate rpn proposals
-    :param img: (H, W, 3) ndarray
+    :param img_tensor: (1, C ,H, W) normalized pytorch Variable
     :param rpn_model: rpn_model
     :param base_size: base size of rpn stride
     :param ratios: ratios of anchors
@@ -27,15 +27,11 @@ def generate_rpn_proposals(img, rpn_model, base_size, ratios, scales, score_thre
     :param score_threshold: objectiveness threshold
     :param iou_threshold: IoU threshold
     :param cuda: if use GPU
-    :return: (N, 4) ndarray regions proposals
+    :return: (N, 4) ndarray region proposals
     """
-
-    # normalize image
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    img_tensor = Variable(normalize(torch.from_numpy(np.transpose(img / 255, (2, 0, 1))))).float()
-    img_tensor = torch.unsqueeze(img_tensor, 0)
-    if cuda == 1:
-        img_tensor = img_tensor.cuda()
+    # image height and width
+    img_h = img_tensor.size()[2]
+    img_w = img_tensor.size()[3]
 
     # produce prediction
     cls_score, reg_score = rpn_model(img_tensor)
@@ -48,9 +44,9 @@ def generate_rpn_proposals(img, rpn_model, base_size, ratios, scales, score_thre
             softmax(cls_score[:, (2 * i, 2 * i + 1), :, :])
 
     # generate anchors
-    score_dim = cls_score.shape[2:4]
+    score_dim = cls_score.size()[2:4]
     anchor_list = generate_anchors(base_size=base_size, ratios=ratios, scales=scales)
-    score_height, score_width = int(score_dim[0]), int(score_dim[1])
+    score_height, score_width = score_dim[0], score_dim[1]
 
     anchor_x_shift = np.arange(0, score_width) * base_size + base_size / 2
     anchor_y_shift = np.arange(0, score_height) * base_size + base_size / 2
@@ -72,8 +68,30 @@ def generate_rpn_proposals(img, rpn_model, base_size, ratios, scales, score_thre
     # deparameterize bbox
     box_pred = box_deparameterize(reg_score, all_anchors)
 
+    # # the original paper uses all the bounding boxes within the image for region proposals, which is slow
+    # # instead I set a score threshold to reduce the number of region proposals
+    # inds_inside_img = np.where(
+    #     (box_pred[:, 0] >= 0) &
+    #     (box_pred[:, 1] >= 0) &
+    #     (box_pred[:, 2] < img_h) &  # height
+    #     (box_pred[:, 3] < img_w)  # width
+    # )[0]
+    # box_pred = all_anchors[inds_inside_img, :]
+    # cls_score = cls_score[inds_inside_img]
+
     # perform non maximum suppression
-    _, _, box_selected = non_maximum_suppression(cls_score, box_pred, (0,), score_threshold, iou_threshold)
+    _, _, box_selected = non_maximum_suppression(cls_score,
+                                                 box_pred,
+                                                 (0,),
+                                                 score_threshold,
+                                                 iou_threshold,
+                                                 ignore_argmax_pred=True)
+
+    # limit bounding boxes within the image
+    # different from the original paper
+    box_selected[:, 0:2] = np.maximum(box_selected[:, 0:2], 0)
+    box_selected[:, 2] = np.minimum(box_selected[:, 2], img_h)
+    box_selected[:, 3] = np.minimum(box_selected[:, 3], img_w)
 
     return box_selected
 
@@ -104,14 +122,19 @@ if __name__ == '__main__':
 
     for img_dir, img_info in img_dict.items():
         img, modified_img_info = rescale_image(img_dir, img_info)
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        img_tensor = Variable(normalize(torch.from_numpy(np.transpose(img / 255, (2, 0, 1))))).float()
+        img_tensor = torch.unsqueeze(img_tensor, 0)
+        if cuda == 1:
+            img_tensor = img_tensor.cuda()
         box_selected = generate_rpn_proposals(
-            img,
+            img_tensor,
             net,
             BASE_SIZE,
             RATIOS,
             SCALES,
-            score_threshold=0.5,
-            iou_threshold=0.5,
+            score_threshold=0.3,
+            iou_threshold=0.7,
             cuda=cuda)
         for object in img_info['objects']:
             ymin, xmin, ymax, xmax = [int(i) for i in object[1:5]]
@@ -123,7 +146,7 @@ if __name__ == '__main__':
                         (0, 0, 255))
 
         # draw positive predictions
-        for box in box_selected[0:10]:
+        for box in box_selected[0:128]:
             ymin, xmin, ymax, xmax = [int(i) for i in box]
             color = np.squeeze([np.random.randint(255, size=1),
                                 np.random.randint(255, size=1),

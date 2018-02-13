@@ -1,24 +1,32 @@
 import numpy as np
 
 
-def non_maximum_suppression(box_scores, bboxes, class_list, score_threshold=0.5, iou_threshold=0.5):
+def non_maximum_suppression(box_scores, bboxes, class_list, score_threshold, iou_threshold, ignore_argmax_pred=False):
     """
     using non maximum suppression to reduce bbox number
     :param box_scores: (N, class_num) ndarray with 1s and 0s
     :param bboxes: (N, 4) ndarray
     :param class_list: list of class ID that NMS apply to
+    :param score_threshold: score threshold for box selection
+    :param iou_threshold: iou threshold
+    :param ignore_argmax_pred: whether ignore argmax prediction for each class for box selection
     :return:
     """
-    class_pred = np.argmax(box_scores, axis=1)
+
     box_selected = []
     box_score = []
     class_label = []
+    class_pred = np.argmax(box_scores, axis=1)
     for class_id in class_list:
-        index = np.where(class_pred == class_id)
-        if np.array(index).size == 0:
-            continue
-        score_candidate = np.squeeze(box_scores[index, class_id])
-        box_candidate = bboxes[index]
+        if ignore_argmax_pred == 0:
+            index = np.where(class_pred == class_id)
+            if np.array(index).size == 0:
+                continue
+            score_candidate = np.squeeze(box_scores[index, class_id])
+            box_candidate = bboxes[index]
+        else:
+            score_candidate = np.squeeze(box_scores[:, class_id])
+            box_candidate = bboxes
 
         # delete box with score less than threshold
         ind_above_threshold = score_candidate > score_threshold
@@ -78,6 +86,6 @@ if __name__ == '__main__':
                        [0, 0, 150, 150],
                        [500, 500, 600, 600],
                        [500, 500, 650, 650]])
-    class_label, box_score, box = non_maximum_suppression(box_scores, bboxes, [0,1,2], score_threshold=0, iou_threshold=0.5)
+    class_label, box_score, box = non_maximum_suppression(box_scores, bboxes, [0, 1, 2], score_threshold=0, iou_threshold=0.5, ignore_argmax_pred=True)
     print(class_label, box_score, box)
 

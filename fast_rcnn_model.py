@@ -19,8 +19,9 @@ class Fast_RCNN(nn.Module):
             self.model.features = nn.Sequential(*list(self.model.features)[:-1])
             self.model = nn.Sequential(*list(self.model.children())[:-1])
 
-            for param in self.model.parameters():
-                param.requires_grad = True
+            for i in range(17):
+                for param in self.model[0][i].parameters():
+                    param.requires_grad = False
 
             # prediction head for classes and bounding boxes
             self.shared_fc_1 = nn.Linear(512 * MAX_POOL_OUTPUT_SIZE[0] * MAX_POOL_OUTPUT_SIZE[1], 512)
