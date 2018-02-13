@@ -15,6 +15,7 @@ from voc2012_parse_xml import voc2012_generate_img_box_dict
 from fast_rcnn_utils import generate_loss, generate_gt
 from generate_rpn_proposals import generate_rpn_proposals
 
+
 MODEL_NAME = 'vgg16'
 BASE_SIZE = 16
 RATIOS = [0.5, 1.0, 2.0]
@@ -68,6 +69,38 @@ def train_fast_rcnn(img_dict_dir,  rpn_model_dir, epoch=5, batch_size=128, cuda=
             class_pred, bbox_pred = net(img_tensor, img_info, region_proposals)
             label_gt, bbox_gt = generate_gt(img_info, region_proposals)
             loss = generate_loss(class_pred, bbox_pred, label_gt, bbox_gt, cuda)
+
+            # # test code
+            # KEY = ['background', 'aeroplane', 'bicycle', 'bird',
+            #        'boat', 'bottle', 'bus', 'car',
+            #        'cat', 'chair', 'cow', 'diningtable',
+            #        'dog', 'horse', 'motorbike', 'person',
+            #        'pottedplant', 'sheep', 'sofa', 'train',
+            #        'tvmonitor']
+            # from box_parametrize import box_deparameterize
+            # import cv2
+            # bbox_gt = box_deparameterize(bbox_gt, region_proposals)
+            # ind = np.where(label_gt != 0)
+            # for box in bbox_gt[ind]:
+            #     print(box)
+            #     ymin, xmin, ymax, xmax = [int(i) for i in box]
+            #     cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 0, 255), 1)
+            # cv2.imshow('image', img)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+            # for i in np.squeeze(ind):
+            #     box = region_proposals[i, :]
+            #     print(box)
+            #     ymin, xmin, ymax, xmax = [int(i) for i in box]
+            #     cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
+            #     cv2.putText(img,
+            #                 KEY[label_gt[i]],
+            #                 (xmin, ymin),
+            #                 cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+            #                 (0, 0, 255))
+            # cv2.imshow('image', img)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
 
             print('image: {}/{}, loss: {}'.format(img_index, img_num, loss.data[0]))
 

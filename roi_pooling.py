@@ -21,14 +21,20 @@ def roi_pooling(img_info, region_proposals, feature_map, output_size=[7, 7]):
     # max pooling for each region proposals
     maxpool = nn.AdaptiveMaxPool2d((output_size[0], output_size[1]))
     output = []
+
     for i in range(region_proposals.shape[0]):
-        result = maxpool(feature_map[
+        try:
+            result = maxpool(feature_map[
                          :,
                          :,
                          region_proposals_in_map[i, 0]:region_proposals_in_map[i, 2] + 1,
                          region_proposals_in_map[i, 1]:region_proposals_in_map[i, 3] + 1])
-        output.append(result)
-
+            output.append(result)
+        except:
+            print(region_proposals_in_map[i, 0],
+                  region_proposals_in_map[i, 2] + 1,
+                  region_proposals_in_map[i, 1],
+                  region_proposals_in_map[i, 3] + 1)
     return torch.cat(output, 0)
 
 
