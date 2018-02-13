@@ -64,6 +64,8 @@ def generate_rpn_proposals(img_tensor, rpn_model, base_size, ratios, scales, sco
     # reshape
     cls_score = np.reshape(np.transpose(cls_score, (0, 2, 3, 1)), (-1, 2), order='C')
     reg_score = np.reshape(np.transpose(reg_score, (0, 2, 3, 1)), (-1, 4), order='C')
+    # limit reg_score[:, 2:4] to avoid numeric error
+    reg_score[:, 2:4] = np.maximum(reg_score[:, 2:4], 5)
 
     # deparameterize bbox
     box_pred = box_deparameterize(reg_score, all_anchors)
