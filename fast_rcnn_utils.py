@@ -67,8 +67,8 @@ def generate_loss(class_pred, bbox_pred, label_gt, bbox_gt, cuda=False):
     if cuda:
         bbox_gt = bbox_gt.cuda()
 
-    mask_not_background = np.repeat(np.expand_dims(label_gt > 0, axis=1), 4, axis=1).astype(np.double)
-    mask_not_background = Variable(torch.from_numpy(mask_not_background))
+    mask_not_background = np.repeat(np.expand_dims(label_gt > 0, axis=1), 4, axis=1).astype(np.uint8)
+    mask_not_background = Variable(torch.from_numpy(mask_not_background)).type(torch.FloatTensor)
     if cuda:
         mask_not_background = mask_not_background.cuda()
 
