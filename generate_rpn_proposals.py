@@ -67,21 +67,22 @@ def generate_rpn_proposals(img_tensor, rpn_model, base_size, ratios, scales, sco
 
     # clip to avoid numeric error
     reg_score[:, 2:4] = np.clip(reg_score[:, 2:4], -5, 5)
-    reg_score[:, 0:2] = np.clip(reg_score[:, 0:2], 0, 64)
+    reg_score[:, 0:2] = np.clip(reg_score[:, 0:2], 0.01, 64)
 
     # deparameterize bbox
     box_pred = box_deparameterize(reg_score, all_anchors)
 
-    # # the original paper uses all the bounding boxes within the image for region proposals, which is slow
-    # # instead I set a score threshold to reduce the number of region proposals
-    # inds_inside_img = np.where(
-    #     (box_pred[:, 0] >= 0) &
-    #     (box_pred[:, 1] >= 0) &
-    #     (box_pred[:, 2] < img_h) &  # height
-    #     (box_pred[:, 3] < img_w)  # width
-    # )[0]
-    # box_pred = all_anchors[inds_inside_img, :]
-    # cls_score = cls_score[inds_inside_img]
+    # the original paper uses all the bounding boxes within the image for region proposals, which is slow
+    # instead I set a score threshold to reduce the number of region proposals
+    # only take box whose center is within image
+    inds_inside_img = np.where(
+        ((box_pred[:, 0] + box_pred[:, 2]) / 2 >= 0) &
+        ((box_pred[:, 1] + box_pred[:, 3]) / 2 >= 0) &
+        ((box_pred[:, 0] + box_pred[:, 2]) / 2 < img_h) &  # height
+        ((box_pred[:, 1] + box_pred[:, 3]) / 2 < img_w)  # width
+    )[0]
+    box_pred = all_anchors[inds_inside_img, :]
+    cls_score = cls_score[inds_inside_img]
 
     # perform non maximum suppression
     _, _, box_selected = non_maximum_suppression(cls_score,
