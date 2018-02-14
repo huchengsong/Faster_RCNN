@@ -49,9 +49,9 @@ def generate_loss(class_pred, bbox_pred, label_gt, bbox_gt, cuda=False):
     calculate loss of fast R-CNN
     :param class_pred: (N, class_num), pytorch Variable, class prediction
     :param bbox_pred: (N, 4 * class_num), pytorch Variable, bounding box prediction
-    :param label_gt: (N, ) numpy array, ground truth label; 0 <= gt_label(i) <= class_num
-    :param bbox_gt: numpy array, ground truth bounding box
-    :param cuda: if use GPU
+    :param label_gt: (N, ) ndarray, ground truth label; 0 <= gt_label(i) <= class_num
+    :param bbox_gt: (N, 4) ndarray, ground truth bounding box
+    :param cuda: whether use GPU
     :return: fast R-CNN loss
     """
     # class classification cross entropy loss
@@ -67,8 +67,8 @@ def generate_loss(class_pred, bbox_pred, label_gt, bbox_gt, cuda=False):
     if cuda:
         bbox_gt = bbox_gt.cuda()
 
-    mask_not_background = np.repeat(np.expand_dims(label_gt > 0, axis=1), 4, axis=1).astype(np.uint8)
-    mask_not_background = Variable(torch.from_numpy(mask_not_background)).type(torch.FloatTensor)
+    mask_not_background = np.repeat(np.expand_dims(label_gt > 0, axis=1), 4, axis=1).astype(np.double)
+    mask_not_background = Variable(torch.from_numpy(mask_not_background))
     if cuda:
         mask_not_background = mask_not_background.cuda()
 

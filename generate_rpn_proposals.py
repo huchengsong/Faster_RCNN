@@ -64,8 +64,9 @@ def generate_rpn_proposals(img_tensor, rpn_model, base_size, ratios, scales, sco
     # reshape
     cls_score = np.reshape(np.transpose(cls_score, (0, 2, 3, 1)), (-1, 2), order='C')
     reg_score = np.reshape(np.transpose(reg_score, (0, 2, 3, 1)), (-1, 4), order='C')
-    # limit reg_score[:, 2:4] to avoid numeric error
-    reg_score[:, 2:4] = np.maximum(reg_score[:, 2:4], 5)
+
+    # clip reg_score[:, 2:4] to avoid numeric error
+    reg_score[:, 2:4] = np.clip(reg_score[:, 2:4], -5, 5)
 
     # deparameterize bbox
     box_pred = box_deparameterize(reg_score, all_anchors)
@@ -148,7 +149,8 @@ if __name__ == '__main__':
                         (0, 0, 255))
 
         # draw positive predictions
-        for box in box_selected[0:128]:
+        for box in box_selected[0:128, :]:
+            print(box)
             ymin, xmin, ymax, xmax = [int(i) for i in box]
             color = np.squeeze([np.random.randint(255, size=1),
                                 np.random.randint(255, size=1),
