@@ -38,7 +38,7 @@ def generate_rpn_proposals(img_tensor, rpn_model, base_size, ratios, scales, sco
 
     # softmax of cls_scores
     num_anchors = int(cls_score.size()[1] / 2)
-    softmax = nn.Softmin(dim=1)
+    softmax = nn.Softmax(dim=1)
     for i in range(0, num_anchors):
         cls_score[:, (2 * i, 2 * i + 1), :, :] = \
             softmax(cls_score[:, (2 * i, 2 * i + 1), :, :])

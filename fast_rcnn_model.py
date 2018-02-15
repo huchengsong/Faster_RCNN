@@ -28,7 +28,7 @@ class Fast_RCNN(nn.Module):
             self.shared_fc_2 = nn.Linear(512, 256)
             self.class_fc = nn.Linear(256, CLASS_NUM)
             self.bbox_fc = nn.Linear(256, CLASS_NUM * 4)
-            self.softmax = nn.Softmax(dim=0)
+            self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x, img_info, region_proposals):
         feature_map = self.model(x)

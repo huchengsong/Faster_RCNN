@@ -142,7 +142,7 @@ def generate_rpn_loss(cls_score, reg_score, cls_gt, reg_gt, cuda=False):
     :return: region proposal network loss
     """
     num_anchors = int(cls_score.size()[1] / 2)
-    softmax = nn.Softmin(dim=1)
+    softmax = nn.Softmax(dim=1)
     for i in range(0, num_anchors):
         cls_score[:, (2 * i, 2 * i + 1), :, :] = \
             softmax(cls_score[:, (2 * i, 2 * i + 1), :, :])

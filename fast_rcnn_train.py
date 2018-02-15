@@ -29,11 +29,12 @@ def train_fast_rcnn(img_dict_dir,  rpn_model_dir, epoch=5, batch_size=128, cuda=
     net = Fast_RCNN(MODEL_NAME)
     if cuda == 1:
         net.cuda()
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=0.001)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=0.0001)
     print(net)
 
     for i in range(epoch):
         for img_dir, img_info in img_dict.items():
+
             optimizer.zero_grad()
             img, img_info = rescale_image(img_dir, img_info)
 
