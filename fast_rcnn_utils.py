@@ -95,7 +95,6 @@ def generate_loss(class_pred, bbox_pred, label_gt, bbox_gt, cuda=False):
 
     bbox_loss = torch.add(loss_larger_than_one, loss_smaller_than_one)
     bbox_loss = torch.sum(torch.mul(mask_not_background, bbox_loss))
-
     return torch.add(class_loss, bbox_loss)
 
 

@@ -22,14 +22,15 @@ RATIOS = [0.5, 1.0, 2.0]
 SCALES = [8, 16, 32]
 
 
-def train_fast_rcnn(img_dict_dir,  rpn_model_dir, epoch=5, batch_size=128, cuda=False):
+def train_fast_rcnn(img_dict_dir,  rpn_proposal_dir, epoch=5, batch_size=128, cuda=False):
     img_dict = np.load(img_dict_dir)[()]
+    rpn_proposal = np.load(rpn_proposal_dir)[()]
     img_num = len(img_dict)
     img_index = 0
     net = Fast_RCNN(MODEL_NAME)
     if cuda == 1:
         net.cuda()
-    optimizer = optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=0.0001)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=0.001)
     print(net)
 
     for i in range(epoch):
@@ -45,24 +46,7 @@ def train_fast_rcnn(img_dict_dir,  rpn_model_dir, epoch=5, batch_size=128, cuda=
             if cuda == 1:
                 img_tensor = img_tensor.cuda()
 
-            # load rpn model and generate region proposals
-            if not cuda:
-                rpn_net = torch.load(rpn_model_dir, map_location=lambda storage, loc: storage)
-            else:
-                rpn_net = torch.load(rpn_model_dir)
-                rpn_net.cuda()
-            for param in rpn_net.parameters():
-                param.volatile = True
-
-            region_proposals = generate_rpn_proposals(
-                img_tensor,
-                rpn_net,
-                BASE_SIZE,
-                RATIOS,
-                SCALES,
-                score_threshold=0.3,
-                iou_threshold=0.7,
-                cuda=cuda)
+            region_proposals = rpn_proposal[img_dir]
 
             if region_proposals.shape[0] > batch_size:
                 region_proposals = region_proposals[0:batch_size, :]
@@ -181,9 +165,9 @@ def main():
         import rpn_train
         rpn_train.main()
 
-    rpn_model_dir = 'rpn_trained.pkl'
     img_dict_dir = '../VOCdevkit/img_box_dict.npy'
-    train_fast_rcnn(img_dict_dir, rpn_model_dir, epoch=5, batch_size=128, cuda=torch.cuda.is_available())
+    rpn_proposal_dir = 'rpn_proposal_dict.npy'
+    train_fast_rcnn(img_dict_dir, rpn_proposal_dir, epoch=5, batch_size=128, cuda=torch.cuda.is_available())
 
 
 if __name__ == '__main__':

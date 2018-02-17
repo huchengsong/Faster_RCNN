@@ -115,10 +115,12 @@ def largest_indices(ary, n):
 
 
 if __name__ == '__main__':
+    rpn_proposal_dict = {}
     model_dir = 'rpn_trained.pkl'
     img_dict_dir = '../VOCdevkit/img_box_dict.npy'
     img_dict = np.load(img_dict_dir)[()]
     cuda = torch.cuda.is_available()
+    index = 0
     if not cuda:
         net = torch.load(model_dir, map_location=lambda storage, loc: storage)
     if cuda:
@@ -141,24 +143,29 @@ if __name__ == '__main__':
             score_threshold=0.3,
             iou_threshold=0.7,
             cuda=cuda)
-        for object in img_info['objects']:
-            ymin, xmin, ymax, xmax = [int(i) for i in object[1:5]]
-            cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
-            cv2.putText(img,
-                        object[0],
-                        (xmin, ymin),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                        (0, 0, 255))
 
-        # draw positive predictions
-        for box in box_selected[0:128, :]:
-            print(box)
-            ymin, xmin, ymax, xmax = [int(i) for i in box]
-            color = np.squeeze([np.random.randint(255, size=1),
-                                np.random.randint(255, size=1),
-                                np.random.randint(255, size=1)]).tolist()
-            cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color, 1)
-
-        cv2.imshow('image', img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        rpn_proposal_dict[img_dir] = box_selected
+        index = index + 1
+        print(index)
+        # for object in img_info['objects']:
+        #     ymin, xmin, ymax, xmax = [int(i) for i in object[1:5]]
+        #     cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
+        #     cv2.putText(img,
+        #                 object[0],
+        #                 (xmin, ymin),
+        #                 cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+        #                 (0, 0, 255))
+        #
+        # # draw positive predictions
+        # for box in box_selected[0:128, :]:
+        #     print(box)
+        #     ymin, xmin, ymax, xmax = [int(i) for i in box]
+        #     color = np.squeeze([np.random.randint(255, size=1),
+        #                         np.random.randint(255, size=1),
+        #                         np.random.randint(255, size=1)]).tolist()
+        #     cv2.rectangle(img, (xmin, ymin), (xmax, ymax), color, 1)
+        #
+        # cv2.imshow('image', img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+    np.save('rpn_proposal_dict.npy', rpn_proposal_dict)
