@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def generate_anchors(base_size=16, ratios=[0.5, 1, 2], scales=[8, 16, 32]):
+def generate_base_anchors(base_size=16, ratios=[0.5, 1, 2], scales=[8, 16, 32]):
     """
     Generate anchor with reference window [0, 0, 15, 15]
     Reference window: [up_left_x, up_left_y, bottom_right_x, bottom_right_y]
@@ -35,11 +35,11 @@ def ratio_scale_enum(anchor, ratios, scales):
                             [x_ctr - 0.5 * scales[i] * (ws - 1) for i in range(len(scales))],
                             [y_ctr + 0.5 * scales[i] * (hs - 1) for i in range(len(scales))],
                             [x_ctr + 0.5 * scales[i] * (ws - 1) for i in range(len(scales))]])
-    return anchors.astype(np.int).reshape(len(ratios)*len(scales), 4)
+    return anchors.reshape(len(ratios)*len(scales), 4)
 
 
 if __name__ == '__main__':
-    a = generate_anchors(ratios=[0.5, 0.75, 1, 1.5, 2])
+    a = generate_base_anchors(ratios=[0.5, 0.75, 1, 1.5, 2])
     print(a.shape)
     print((a[:, 2] - a[:, 0] + 1) / 2)
     print((a[:, 3] - a[:, 1] + 1) / 2)

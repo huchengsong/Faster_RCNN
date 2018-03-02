@@ -1,16 +1,15 @@
 import numpy as np
 
 
-def non_maximum_suppression(box_scores, bboxes, class_list, score_threshold, iou_threshold, ignore_argmax_pred=False):
+def non_maximum_suppression(box_scores, bboxes, class_list, score_threshold, iou_threshold):
     """
     using non maximum suppression to reduce bbox number
-    :param box_scores: (N, class_num) ndarray with 1s and 0s
-    :param bboxes: (N, 4) ndarray
+    :param box_scores: (N, class_num) ndarray
+    :param bboxes: (N, 4 * class_num) ndarray
     :param class_list: list of class ID that NMS apply to
     :param score_threshold: score threshold for box selection
     :param iou_threshold: iou threshold
-    :param ignore_argmax_pred: whether ignore argmax prediction for each class for box selection
-    :return:
+    :return: label, score, box
     """
 
     box_selected = []
@@ -18,15 +17,11 @@ def non_maximum_suppression(box_scores, bboxes, class_list, score_threshold, iou
     class_label = []
     class_pred = np.argmax(box_scores, axis=1)
     for class_id in class_list:
-        if ignore_argmax_pred == 0:
-            index = np.where(class_pred == class_id)
-            if np.array(index).size == 0:
-                continue
-            score_candidate = np.squeeze(box_scores[index, class_id])
-            box_candidate = bboxes[index]
-        else:
-            score_candidate = np.squeeze(box_scores[:, class_id])
-            box_candidate = bboxes
+        index = np.where(class_pred == class_id)
+        if np.array(index).size == 0:
+            continue
+        score_candidate = np.squeeze(box_scores[index, class_id])
+        box_candidate = np.squeeze(bboxes[index, class_id * 4:(class_id + 1) * 4])
 
         # delete box with score less than threshold
         ind_above_threshold = score_candidate > score_threshold
@@ -71,10 +66,19 @@ def non_maximum_suppression(box_scores, bboxes, class_list, score_threshold, iou
 
 
 if __name__ == '__main__':
-    def softmax(x, axis=None):
-        return np.exp(x) / np.exp(x).sum(axis=axis)[:, None]
-    box_scores = softmax(np.random.rand(10, 3), axis=1)
-    print(box_scores)
+    # def softmax(x, axis=None):
+    #     return np.exp(x) / np.exp(x).sum(axis=axis)[:, None]
+    # box_scores = softmax(np.random.rand(10, 3), axis=1)
+    box_scores = np.array([[0.35629722, 0.29934438, 0.34435839],
+                           [0.33190525, 0.43829933, 0.22979542],
+                           [0.35513699, 0.39927991, 0.24558309],
+                           [0.43057433, 0.33340436, 0.23602131],
+                           [0.33935831, 0.20390023, 0.45674146],
+                           [0.37249841, 0.30570373, 0.32179787],
+                           [0.47038923, 0.23873957, 0.2908712],
+                           [0.28352702, 0.31179673, 0.40467625],
+                           [0.22726669, 0.47013369, 0.30259961],
+                           [0.39092056, 0.27074105, 0.33833839]])
 
     bboxes = np.array([[0, 0, 100, 100],
                        [0, 0, 110, 110],
@@ -86,6 +90,10 @@ if __name__ == '__main__':
                        [0, 0, 150, 150],
                        [500, 500, 600, 600],
                        [500, 500, 650, 650]])
-    class_label, box_score, box = non_maximum_suppression(box_scores, bboxes, [0, 1, 2], score_threshold=0, iou_threshold=0.5, ignore_argmax_pred=True)
+    class_label, box_score, box = non_maximum_suppression(box_scores,
+                                                          np.concatenate((bboxes, bboxes, bboxes), axis=1),
+                                                          [0, 1, 2],
+                                                          score_threshold=0,
+                                                          iou_threshold=0.5)
     print(class_label, box_score, box)
 

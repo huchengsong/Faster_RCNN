@@ -106,3 +106,4 @@ venv.bak/
 
 .idea
 *.pkl
+rpn_proposal_dict.npy

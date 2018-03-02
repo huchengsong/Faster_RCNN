@@ -41,7 +41,6 @@ def rescale_image(img_dir, img_info):
     return rescaled_img, img_info
 
 if __name__ == '__main__':
-    import os
     img_box_dict = np.load('../VOCdevkit/img_box_dict.npy')[()]
     for img_dir, img_info in img_box_dict.items():
         print(img_info)

@@ -1,132 +1,52 @@
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-from bbox_IoU import bbox_IoU
-from box_parametrize import box_parameterize
 
-KEY = ['background', 'aeroplane', 'bicycle', 'bird',
-       'boat', 'bottle', 'bus', 'car',
-       'cat', 'chair', 'cow', 'diningtable',
-       'dog', 'horse', 'motorbike', 'person',
-       'pottedplant', 'sheep', 'sofa', 'train',
-       'tvmonitor']
-
-
-def generate_gt(img_info, region_proposals):
+def fast_rcnn_loss(roi_score, roi_cls_loc, gt_roi_loc, gt_roi_label, roi_sigma):
     """
-    :param img_info: dictionary with key ('img_size', 'objects')
-    :param region_proposals: (N, 4) numpy array, region proposal
-    :return: label: (N, ) labels
-    :return: gt_box_parameterized: (N, 4) numpy array, parametreized ground truth box based on
-     region_proposals
+    calculate fast rcnn class and regression loss
+    :param roi_score: [N, num_classes], pytorch cuda Variable
+    :param roi_cls_loc: [N, 4 * num_classes], pytorch cuda Variable
+    :param gt_roi_loc: [N, 4], ndarray
+    :param gt_roi_label: [N, ], ndarray
+    :param roi_sigma: sigma for smooth l1 loss
+    :return: pytorch Variable: cls_loss, loc_loss
     """
-    label = np.zeros(region_proposals.shape[0]).astype(np.int)
-    ground_truth_boxes = np.array(img_info['objects'])[:, 1:5].astype(np.float32)
-    ground_truth_class = np.array([KEY.index(cls) for cls in np.array(img_info['objects'])[:, 0]])
 
-    # label each region proposal
-    iou_matrix = bbox_IoU(ground_truth_boxes, region_proposals)
-    ind_max_each_proposal = np.argmax(iou_matrix, axis=0)
-    max_iou_each_proposal = iou_matrix[ind_max_each_proposal, np.arange(region_proposals.shape[0])]
-    ind_positive = np.where(max_iou_each_proposal >= 0.5)
-    label[ind_positive] = ground_truth_class[ind_max_each_proposal[ind_positive]]
-    ind_negative = np.where(np.logical_and(
-        max_iou_each_proposal < 0.5,
-        max_iou_each_proposal >= 0.1))
-    label[ind_negative] = 0
+    num_roi = roi_cls_loc.size()[0]
+    roi_cls_loc = roi_cls_loc.view(num_roi, -1, 4)
+    gt_roi_label = Variable(torch.from_numpy(gt_roi_label)).long().cuda()
+    gt_roi_loc = Variable(torch.from_numpy(gt_roi_loc)).float().cuda()
+    roi_loc = roi_cls_loc[torch.arange(0, num_roi).long().cuda(), gt_roi_label]
 
-    # proposal parameterize based on ground truth
-    gt_box_parameterized = box_parameterize(ground_truth_boxes[ind_max_each_proposal], region_proposals)
-    gt_box_parameterized[np.where(label == 0), :] = 0
+    # regression loss
+    pos_mask = Variable(torch.zeros(num_roi, 4)).cuda()
+    pos_mask[(gt_roi_label > 0).view(-1, 1).expand_as(pos_mask).cuda()] = 1
+    loc_loss = _smooth_l1_loss(roi_loc, gt_roi_loc, pos_mask, roi_sigma)
+    loc_loss /= num_roi
 
-    return label, gt_box_parameterized
+    # class loss
+    cls_loss = nn.CrossEntropyLoss()(roi_score, gt_roi_label)
+
+    return cls_loss, loc_loss
 
 
-def generate_loss(class_pred, bbox_pred, label_gt, bbox_gt, cuda=False):
+def _smooth_l1_loss(x, gt, mask, sigma):
     """
-    calculate loss of fast R-CNN
-    :param class_pred: (N, class_num), pytorch Variable, class prediction
-    :param bbox_pred: (N, 4 * class_num), pytorch Variable, bounding box prediction
-    :param label_gt: (N, ) ndarray, ground truth label; 0 <= gt_label(i) <= class_num
-    :param bbox_gt: (N, 4) ndarray, ground truth bounding box
-    :param cuda: whether use GPU
-    :return: fast R-CNN loss
+    retrun smooth l1 loss
+    :param x: [N, K], troch Variable
+    :param gt: [N, K], troch Variable
+    :param mask: [N, K], troch Variable
+    :param sigma: constant
+    :return: loss
     """
-    # class classification cross entropy loss
-    cross_entropy_loss = nn.CrossEntropyLoss()
-    gt_label = Variable(torch.from_numpy(label_gt)).type(torch.LongTensor)
-    if cuda:
-        gt_label = gt_label.cuda()
-    class_loss = cross_entropy_loss(class_pred, gt_label)
-
-    # bounding box smooth L1 loss
-    proposal_num, class_num = class_pred.size()[0:2]
-    bbox_gt = Variable(torch.from_numpy(bbox_gt)).type(torch.FloatTensor)
-    if cuda:
-        bbox_gt = bbox_gt.cuda()
-
-    mask_not_background = np.repeat(np.expand_dims(label_gt > 0, axis=1), 4, axis=1).astype(np.uint8)
-    mask_not_background = Variable(torch.from_numpy(mask_not_background)).type(torch.FloatTensor)
-    if cuda:
-        mask_not_background = mask_not_background.cuda()
-
-    ind_bbox_at_gt = np.zeros((proposal_num, 4 * class_num)).astype(np.uint8)
-    for i in range(proposal_num):
-        ind_bbox_at_gt[i, label_gt[i] * 4:(label_gt[i] + 1) * 4] = 1
-    ind_bbox_at_gt = Variable(torch.from_numpy(ind_bbox_at_gt)).type(torch.ByteTensor)
-    if cuda:
-        ind_bbox_at_gt = ind_bbox_at_gt.cuda()
-    bbox_pred_at_gt = bbox_pred[ind_bbox_at_gt].view(proposal_num, 4)
-
-    # calculate loss
-    abs_diff_pred_gt = torch.abs(bbox_pred_at_gt - bbox_gt)
-    if not cuda:
-        loss_larger_than_one = torch.mul((abs_diff_pred_gt >= 1).type(torch.FloatTensor),
-                                         abs_diff_pred_gt - 0.5)
-        loss_smaller_than_one = torch.mul((abs_diff_pred_gt < 1).type(torch.FloatTensor),
-                                          torch.mul(torch.pow(abs_diff_pred_gt, 2), 0.5))
-    if cuda:
-        loss_larger_than_one = torch.mul((abs_diff_pred_gt >= 1).type(torch.FloatTensor).cuda(),
-                                         abs_diff_pred_gt - 0.5)
-        loss_smaller_than_one = torch.mul((abs_diff_pred_gt < 1).type(torch.FloatTensor).cuda(),
-                                          torch.mul(torch.pow(abs_diff_pred_gt, 2), 0.5))
-
-    bbox_loss = torch.add(loss_larger_than_one, loss_smaller_than_one)
-    bbox_loss = torch.sum(torch.mul(mask_not_background, bbox_loss))
-    return torch.add(class_loss, bbox_loss)
-
-
-if __name__ == "__main__":
-    test_proposals = np.array([[0, 0, 500, 500], [300, 300, 600, 600]])
-
-    import cv2
-    from rescale_image import rescale_image
-    from fast_rcnn_train import generate_test_region_proposals
-    np.set_printoptions(threshold=np.nan)
-
-    img_box_dict = np.load('../VOCdevkit/img_box_dict.npy')[()]
-    for img_dir, img_info in img_box_dict.items():
-        image, image_info = rescale_image(img_dir, img_info)
-        test_proposals = generate_test_region_proposals(img_info)
-        label, gt_box_parameterized = generate_gt(image_info, test_proposals)
-        print(label, gt_box_parameterized)
-        for object in image_info['objects']:
-            ymin, xmin, ymax, xmax = [int(i) for i in object[1:5]]
-            cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
-            cv2.putText(image,
-                    object[0],
-                    (xmin, ymin),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                    (0, 0, 255))
-        for box in test_proposals:
-            ymin, xmin, ymax, xmax = [int(i) for i in box]
-            cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 0, 255), 1)
-        class_pred = Variable(torch.rand(test_proposals.shape[0], 21), requires_grad=True)
-        print('class_pred.size(): ', class_pred.size())
-        bbox_pred = Variable(torch.rand(test_proposals.shape[0], 84), requires_grad=True)
-        loss = generate_loss(class_pred, bbox_pred, label, gt_box_parameterized)
-        cv2.imshow('image', image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+    sigma2 = sigma ** 2
+    diff = mask * (x - gt)
+    abs_diff = diff.abs()
+    flag = (abs_diff.data < (1. / sigma2)).float()
+    flag = Variable(flag)
+    y = (flag * (sigma2 / 2.) * (diff ** 2) +
+         (1 - flag) * (abs_diff - 0.5 / sigma2))
+    loss = y.sum()
+    return loss

@@ -47,8 +47,8 @@ if __name__ == "__main__":
     IoU = bbox_IoU(box, box)
     print(np.around(IoU, decimals=2))
 
-    box1 = np.array([[0, 0, 2, 1]])
-    box2 = np.array([[0, 0, 1, 2]])
+    box1 = np.array([[0, 0, 200, 100]])
+    box2 = np.array([[0, 0, 100, 200]])
     IoU = bbox_IoU(box1, box2)
     print(np.around(IoU, decimals=2))
 

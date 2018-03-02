@@ -28,6 +28,7 @@ def box_parameterize(input_boxes, base_boxes):
 
     return result
 
+
 def box_deparameterize(input_boxes, base_boxes):
     """
     :param input_boxes: (N, 4)
