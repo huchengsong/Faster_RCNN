@@ -1,4 +1,5 @@
 import numpy as np
+from numba import jit, float32
 
 
 def box_parameterize(input_boxes, base_boxes):
@@ -62,10 +63,33 @@ def box_deparameterize(input_boxes, base_boxes):
     return result
 
 
-if __name__ == '__main__':
+def test_correctness():
     in_box = np.array([[0, 0, 100, 100], [-50, -50, 150, 150]])
     anchor_box = np.array([[25, 25, 75, 75], [0, 0, 100, 50]])
     out = box_parameterize(in_box, anchor_box)
     de_out = box_deparameterize(out, anchor_box)
     print(out)
     print(de_out)
+
+
+def test_speed(num_box):
+    from timeit import default_timer as timer
+    array = np.empty((num_box, 4), np.float32)
+    rand = np.random.randint(0, 500, size=(num_box, 2))
+    array[:, 0:2] = rand
+    array[:, 2:4] = rand + 200
+
+    start = timer()
+    result = box_parameterize(array, array)
+    end = timer()
+    print(end - start)
+
+    start = timer()
+    box_deparameterize(result, array)
+    end = timer()
+    print(end - start)
+
+
+if __name__ == '__main__':
+    test_correctness()
+    test_speed(10000)

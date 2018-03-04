@@ -1,7 +1,7 @@
 import numpy as np
 import torch
+import torch.nn as nn
 from torch.autograd import Variable
-import torch.nn.functional as F
 from box_parametrize import box_parameterize
 from bbox_IoU import bbox_IoU
 
@@ -151,14 +151,13 @@ def rpn_loss(rpn_score, rpn_loc, gt_rpn_loc, gt_rpn_label, rpn_sigma):
     mask[(gt_rpn_label > 0).view(-1, 1).expand_as(mask).cuda()] = 1
     loc_loss = _smooth_l1_loss(rpn_loc, gt_rpn_loc, mask, rpn_sigma)
 
-    # Normalize by total number of negative and positive rois.
     # normalize by the number of positive rois
     loc_loss /= (gt_rpn_label > 0).float().sum()
 
     # rpn cls loss
-    # F.cross_entropy includes LogSoftMax and NLLLoss in one single function
+    # nn.CrossEntropy includes LogSoftMax and NLLLoss in one single function
     # TODO: check whether need normalization
-    cls_loss = F.cross_entropy(rpn_score, gt_rpn_label.cuda(), ignore_index=-1)
+    cls_loss = nn.CrossEntropyLoss(ignore_index=-1)(rpn_score, gt_rpn_label)
 
     return cls_loss, loc_loss
 

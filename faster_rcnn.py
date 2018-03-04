@@ -9,8 +9,8 @@ from box_parametrize import box_deparameterize
 
 class FasterRCNN(nn.Module):
     def __init__(self, extractor, rpn, head,
-                 loc_normalize_mean=(0., 0., 0., 0.),
-                 loc_normalize_std=(0.1, 0.1, 0.2, 0.2),
+                 loc_normalize_mean=[0., 0., 0., 0.],
+                 loc_normalize_std=[0.1, 0.1, 0.2, 0.2],
                  num_class=21):
         super(FasterRCNN, self).__init__()
         self.extractor = extractor

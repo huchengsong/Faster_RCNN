@@ -3,6 +3,7 @@ import torch
 from torch.autograd import Variable
 import torchvision.models as models
 import numpy as np
+from numba import jit, float32
 
 from generate_base_anchors import generate_base_anchors
 from box_parametrize import box_deparameterize
@@ -15,7 +16,7 @@ def load_vgg16():
     model = models.vgg16(pretrained=True)
     features = list(model.features)[:30]
     features = nn.Sequential(*features)
-    classifier = list(model.classifier)[:6]
+    classifier = list(model.classifier)[:3]
     classifier = nn.Sequential(*classifier)
     # requires_grad = False for the first few layers
     for i in range(10):
@@ -25,6 +26,7 @@ def load_vgg16():
     return features, classifier
 
 
+@jit([float32[:](float32, float32, float32, float32[:])])
 def anchor_proposals(feature_height, feature_width, stride, anchor_base):
     """
     return anchor proposals for an image
@@ -36,14 +38,20 @@ def anchor_proposals(feature_height, feature_width, stride, anchor_base):
     """
     anchor_x_shift = np.arange(0, feature_width) * stride + stride/2
     anchor_y_shift = np.arange(0, feature_height) * stride + stride/2
+    anchor_base = anchor_base.astype(np.float32)
+    anchor_centers = np.empty((feature_width * feature_height, 2), dtype=np.float32)
+    for i in range(feature_height):
+        for j in range(feature_width):
+            anchor_centers[i * feature_width + j, :] = anchor_y_shift[i], anchor_x_shift[j]
 
-    anchor_centers = np.array([[i, j]
-                               for i in anchor_y_shift
-                               for j in anchor_x_shift])
-    anchors = np.array([np.tile(anchor_centers[i], 2) + anchor_base[j]
-                        for i in range(0, anchor_centers.shape[0])
-                        for j in range(0, anchor_base.shape[0])])
-    return anchors.astype(np.float32)
+    num_anchor_base = anchor_base.shape[0]
+    anchors = np.empty((feature_width * feature_height * num_anchor_base, 4), dtype=np.float32)
+    for i in range(feature_width * feature_height):
+        for j in range(num_anchor_base):
+            anchors[i * num_anchor_base + j, 0:2] = anchor_centers[i] + anchor_base[j, 0:2]
+            anchors[i * num_anchor_base + j, 2:4] = anchor_centers[i] + anchor_base[j, 2:4]
+
+    return anchors
 
 
 def initialize_params(x, mean=0, stddev=0.01):
@@ -71,7 +79,7 @@ def create_rpn_proposals(locs, scores, anchors, img_size):
     score = scores.cpu().data.numpy()
     rois = box_deparameterize(loc, anchors)
 
-    # take the first num_pre_nms rois and scores
+    # take top num_pre_nms rois and scores
     order = score.ravel().argsort()[::-1]
     order = order[:num_pre_nms]
     rois = rois[order, :]
@@ -138,8 +146,8 @@ class RPN(nn.Module):
 
         rpn_scores = self.score(x)
         rpn_scores = rpn_scores.permute(0, 2, 3, 1).contiguous().view(-1, 2)
-        rpn_scores = self.softmax(rpn_scores)
-        rpn_fg_scores = rpn_scores[:, 1].contiguous()
+        rpn_scores_after_softmax = self.softmax(rpn_scores)
+        rpn_fg_scores = rpn_scores_after_softmax[:, 1].contiguous()
         rois = create_rpn_proposals(rpn_locs, rpn_fg_scores, anchors, img_size)
 
         return rpn_locs, rpn_scores, rois, anchors
@@ -160,7 +168,6 @@ class VGG16ROIHead(nn.Module):
         self.roi_pooling = RoIPooling2D(self.roi_size[0],
                                         self.roi_size[1],
                                         self.spatial_scale)
-        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x, rois):
         roi_indices = torch.zeros(rois.shape[0])
@@ -169,18 +176,32 @@ class VGG16ROIHead(nn.Module):
         xy_indices_and_rois = Variable(indices_and_rois[:, [0, 2, 1, 4, 3]]).cuda().contiguous()
 
         pool_result = self.roi_pooling(x, xy_indices_and_rois)
-        pool_result = pool_result.view(pool_result.size(0), -1)
+        pool_result = pool_result.view(pool_result.size()[0], -1)
         fc = self.classifier(pool_result)
         roi_cls_locs = self.cls_loc(fc)
         roi_scores = self.score(fc)
-        roi_scores = self.softmax(roi_scores)
+
         return roi_cls_locs, roi_scores
 
 
 def test():
+    # test create_rpn_proposals()
+    locs = Variable(torch.zeros((6, 4))).float().cuda()
+    scores = Variable(torch.FloatTensor([1, 0.1, 0.2, 0.3, 0.4, 0.5])).cuda()
+    anchors = np.array([[0, 0, 17, 17],
+                        [0, 0, 100, 100],
+                        [0, 0, 110, 110],
+                        [0, 0, 120, 120],
+                        [200, 200, 300, 300],
+                        [200, 200, 255, 255]])
+    img_size = [260, 260]
+    roi = create_rpn_proposals(locs, scores, anchors, img_size)
+    print(roi)
+
     # test anchor_proposals()
     anchor_base = generate_base_anchors(16, [0.5, 1.0, 2.0], [8, 16, 32])
     anchors = anchor_proposals(16, 16, 16, anchor_base)
+
     center = (anchors[:, [0, 1]] + anchors[:, [2, 3]])/2
     print(center[[9 * i for i in range(16 * 16)], :]/16)
 
@@ -211,7 +232,6 @@ def test():
         roi_cls_locs, roi_scores = fast_rcnn.head(feature, rois)
         print(rpn_locs, rpn_scores, rois, anchors)
         print(roi_cls_locs, roi_scores)
-    # TODO: test create_rpn_proposals()
 
 
 if __name__ == "__main__":

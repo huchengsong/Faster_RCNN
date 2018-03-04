@@ -63,7 +63,8 @@ def train(epochs=10, pretrained_model=None):
             img, img_info = rescale_image(img_dir, img_info)
             img_tensor = create_img_tensor(img)
             trainer.train_step(img_tensor, img_info)
-
+        #     break
+        # break
 def test():
     # test generate_train_val_test_data()
     from rescale_image import rescale_image

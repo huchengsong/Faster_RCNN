@@ -29,8 +29,7 @@ def num_to_text(label_num):
 
     return np.array(label_text)
 
-
-if __name__ == "__main__":
+def test():
     label_text = np.array(['background', 'aeroplane', 'bicycle', 'bird',
                            'boat', 'bottle', 'bus', 'car',
                            'cat', 'chair', 'cow', 'diningtable',
@@ -42,3 +41,7 @@ if __name__ == "__main__":
     print(label_num)
     text = num_to_text(label_num)
     print(text)
+
+
+if __name__ == "__main__":
+    test()
