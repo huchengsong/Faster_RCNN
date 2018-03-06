@@ -3,10 +3,9 @@ import torch
 from torch.autograd import Variable
 import torchvision.models as models
 import numpy as np
-from numba import jit, float32
 
-from generate_base_anchors import generate_base_anchors
-from box_parametrize import box_deparameterize
+from generate_base_anchors import generate_base_anchors, anchor_proposals
+from box_parametrize import box_deparameterize_gpu
 from roi_module import RoIPooling2D
 from faster_rcnn import FasterRCNN
 from non_maximum_suppression import non_maximum_suppression_rpn
@@ -26,34 +25,6 @@ def load_vgg16():
     return features, classifier
 
 
-@jit([float32[:](float32, float32, float32, float32[:])])
-def anchor_proposals(feature_height, feature_width, stride, anchor_base):
-    """
-    return anchor proposals for an image
-    :param feature_height: height of feature map
-    :param feature_width: width of feature map
-    :param stride: stride on images
-    :param anchor_base: [K, 4], ndarray, anchors base at each location
-    :return: [N, 4], ndarray, anchor proposals
-    """
-    anchor_x_shift = np.arange(0, feature_width) * stride + stride/2
-    anchor_y_shift = np.arange(0, feature_height) * stride + stride/2
-    anchor_base = anchor_base.astype(np.float32)
-    anchor_centers = np.empty((feature_width * feature_height, 2), dtype=np.float32)
-    for i in range(feature_height):
-        for j in range(feature_width):
-            anchor_centers[i * feature_width + j, :] = anchor_y_shift[i], anchor_x_shift[j]
-
-    num_anchor_base = anchor_base.shape[0]
-    anchors = np.empty((feature_width * feature_height * num_anchor_base, 4), dtype=np.float32)
-    for i in range(feature_width * feature_height):
-        for j in range(num_anchor_base):
-            anchors[i * num_anchor_base + j, 0:2] = anchor_centers[i] + anchor_base[j, 0:2]
-            anchors[i * num_anchor_base + j, 2:4] = anchor_centers[i] + anchor_base[j, 2:4]
-
-    return anchors
-
-
 def initialize_params(x, mean=0, stddev=0.01):
     x.weight.data.normal_(mean, stddev)
     x.bias.data.zero_()
@@ -62,11 +33,11 @@ def initialize_params(x, mean=0, stddev=0.01):
 def create_rpn_proposals(locs, scores, anchors, img_size):
     """
     create rpn proposal based on rpn result
-    :param locs: (N, 4), pytorch Variable of RPN prediction
-    :param scores: (N, ), pytorch Variable of RPN prediction
-    :param anchors: (N, 4), ndarray
+    :param locs: (N, 4), pytorch tensor of RPN prediction
+    :param scores: (N, ), pytorch tensor of RPN prediction
+    :param anchors: (N, 4), pytorch tensor
     :param img_size: [height, width]
-    :return: [K, 4], ndarray, rpn proposals
+    :return: [K, 4], pytorch tensor, rpn proposals
     """
     nms_thresh = 0.7
     num_pre_nms = 12000
@@ -75,29 +46,32 @@ def create_rpn_proposals(locs, scores, anchors, img_size):
     img_h = img_size[0]
     img_w = img_size[1]
 
-    loc = locs.cpu().data.numpy()
-    score = scores.cpu().data.numpy()
-    rois = box_deparameterize(loc, anchors)
+    rois = box_deparameterize_gpu(locs, anchors)
 
     # take top num_pre_nms rois and scores
-    order = score.ravel().argsort()[::-1]
+
+    _, order = torch.sort(scores, descending=True)
     order = order[:num_pre_nms]
-    rois = rois[order, :]
-    score = score[order]
+    rois = rois[order, :].contiguous()
+    scores = scores[order].contiguous()
+
 
     # clip bbox to image size
-    rois[:, [0, 2]] = np.clip(rois[:, [0, 2]], 0, img_h)
-    rois[:, [1, 3]] = np.clip(rois[:, [1, 3]], 0, img_w)
+    rois[rois < 0] = 0
+    rois[:, 0][rois[:, 0] > img_h] = img_h
+    rois[:, 1][rois[:, 1] > img_w] = img_w
+    rois[:, 2][rois[:, 2] > img_h] = img_h
+    rois[:, 3][rois[:, 3] > img_w] = img_w
 
     # remove boxes with size smaller than threshold
     height = rois[:, 2] - rois[:, 0]
     width = rois[:, 3] - rois[:, 1]
-    keep = np.where((height >= min_size) & (width >= min_size))[0]
-    rois = rois[keep, :]
-    score = score[keep]
+    keep = torch.nonzero((height >= min_size) & (width >= min_size))[:, 0]
+    rois = rois[keep, :].contiguous()
+    scores = scores[keep].contiguous()
 
-    # nms
-    _, roi_selected = non_maximum_suppression_rpn(rois, nms_thresh, score, num_post_nms)
+    #nms
+    _, roi_selected = non_maximum_suppression_rpn(rois, nms_thresh, scores, num_post_nms)
 
     return roi_selected
 
@@ -106,12 +80,13 @@ class FasterRCNNVGG16(FasterRCNN):
     def __init__(self, num_class=21, ratios=[0.5, 1., 2.], scales=[8, 16, 32], stride=16):
         # load pre-trained model
         feature_extractor, classifier = load_vgg16()
-
-        rpn = RPN(512, 512, ratios, scales, stride)
+        feature_extractor = feature_extractor.cuda()
+        classifier = classifier.cuda()
+        rpn = RPN(512, 512, ratios, scales, stride).cuda()
         head = VGG16ROIHead(num_class,
                             roi_size=[7, 7],
                             spatial_scale=1./stride,
-                            classifier=classifier)
+                            classifier=classifier).cuda()
 
         super(FasterRCNNVGG16, self).__init__(feature_extractor, rpn, head)
 
@@ -124,7 +99,7 @@ class RPN(nn.Module):
         self.ratios = ratios
         self.anchor_base = generate_base_anchors(stride, ratios, scales)
         self.num_anchor_base = self.anchor_base.shape[0]
-
+        self.all_anchors = anchor_proposals(64, 64, stride, self.anchor_base)
         self.leaky_relu = nn.LeakyReLU(0.01)
         self.conv = nn.Conv2d(in_channel, out_channel, 3, stride=1, padding=1)
         self.score = nn.Conv2d(out_channel, self.num_anchor_base * 2, 1, stride=1, padding=0)
@@ -135,10 +110,20 @@ class RPN(nn.Module):
         initialize_params(self.loc, 0, 0.01)
 
     def forward(self, x, img_size):
+        """
+        forward function of RPN
+        :param x: extracted features from image tensor, pytroch Variable
+        :param img_size: [H, W]
+        :param all_anchors: anchors generate at the beginning of training/testing reusable for each iteration
+        :return: torch Variable: rpn_locs, (N, 4)
+                                 rpn_scores, (N, 2)
+                torch tensors: rois, (K, 4)
+                         anchors (L, 4)
+        """
         n, _, feature_h, feature_w = x.size()
         if n != 1:
             raise ValueError('Currently only batch size 1 is supported.')
-        anchors = anchor_proposals(feature_h, feature_w, self.stride, self.anchor_base)
+        anchors = self.all_anchors[0:feature_h, 0:feature_w].contiguous().view(-1, 4)
         x = self.leaky_relu(self.conv(x))
 
         rpn_locs = self.loc(x)
@@ -148,7 +133,10 @@ class RPN(nn.Module):
         rpn_scores = rpn_scores.permute(0, 2, 3, 1).contiguous().view(-1, 2)
         rpn_scores_after_softmax = self.softmax(rpn_scores)
         rpn_fg_scores = rpn_scores_after_softmax[:, 1].contiguous()
-        rois = create_rpn_proposals(rpn_locs, rpn_fg_scores, anchors, img_size)
+        from timeit import default_timer as timer
+        a = timer()
+        rois = create_rpn_proposals(rpn_locs.data, rpn_fg_scores.data, anchors, img_size)
+        print('create_rpn_proposals', timer()-a)
 
         return rpn_locs, rpn_scores, rois, anchors
 
@@ -170,10 +158,9 @@ class VGG16ROIHead(nn.Module):
                                         self.spatial_scale)
 
     def forward(self, x, rois):
-        roi_indices = torch.zeros(rois.shape[0])
-        rois = torch.from_numpy(rois).float()
-        indices_and_rois = torch.cat([roi_indices[:, None], rois], dim=1)
-        xy_indices_and_rois = Variable(indices_and_rois[:, [0, 2, 1, 4, 3]]).cuda().contiguous()
+        roi_indices = torch.zeros(rois.size()[0]).float().cuda()
+        indices_and_rois = torch.stack([roi_indices, rois[:, 0], rois[:, 1], rois[:, 2], rois[:, 3]], dim=1)
+        xy_indices_and_rois = Variable(indices_and_rois[:, [0, 2, 1, 4, 3]]).contiguous()
 
         pool_result = self.roi_pooling(x, xy_indices_and_rois)
         pool_result = pool_result.view(pool_result.size()[0], -1)

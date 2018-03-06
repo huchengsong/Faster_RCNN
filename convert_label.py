@@ -38,9 +38,9 @@ def test():
                            'tvmonitor'])
 
     label_num = text_to_num(label_text)
-    print(label_num)
+    print(label_num, label_num.dtype)
     text = num_to_text(label_num)
-    print(text)
+    print(text, text.dtype)
 
 
 if __name__ == "__main__":

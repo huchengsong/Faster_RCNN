@@ -37,8 +37,14 @@ def create_img_tensor(img):
     :return: [1, C, H, W], normalized img_tensor in range (0, 1)
     """
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    img_tensor = Variable(normalize(torch.from_numpy(np.transpose(img / 255, (2, 0, 1))))).cuda().float()
-    img_tensor = torch.unsqueeze(img_tensor, 0)
+
+    img_tensor = Variable(normalize(torch.from_numpy(np.transpose(img.astype(np.float32) / 255, (2, 0, 1)))))
+
+    from timeit import default_timer as timer
+    a = timer()
+    img_tensor = img_tensor.cuda()
+    print('to Variable', timer() - a)
+    img_tensor = img_tensor.unsqueeze_(0)
 
     return img_tensor
 
@@ -52,19 +58,24 @@ def eval(img_dict, faster_rcnn, test_num=10000):
 def train(epochs=10, pretrained_model=None):
     dict_train, dict_val, dict_test = \
         generate_train_val_test_data('../VOCdevkit/img_box_dict.npy')
-    faster_rcnn = FasterRCNNVGG16()
+    faster_rcnn = FasterRCNNVGG16().cuda()
     print('model constructed')
     trainer = FasterRCNNTrainer(faster_rcnn).cuda()
     if pretrained_model:
         trainer.load(pretrained_model)
         print('load pretrained model from {}'.format(pretrained_model))
+    j = 0
     for epoch in range(epochs):
         for i, [img_dir, img_info] in tqdm(enumerate(dict_train.items())):
             img, img_info = rescale_image(img_dir, img_info)
             img_tensor = create_img_tensor(img)
             trainer.train_step(img_tensor, img_info)
-        #     break
-        # break
+            j = j + 1
+            if j == 50:
+                break
+        break
+
+
 def test():
     # test generate_train_val_test_data()
     from rescale_image import rescale_image
@@ -84,4 +95,6 @@ def test():
 
 
 if __name__ == '__main__':
-    train()
+    with torch.autograd.profiler.profile() as prof:
+        train()
+    print(prof)

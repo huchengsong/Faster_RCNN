@@ -1,21 +1,25 @@
 import numpy as np
 import cupy as cp
+import torch
 
 
 def non_maximum_suppression_rpn(bbox, thresh, score=None, limit=None):
     """
     apply non maximun suppression
-    :param bbox: (N, 4), ndarray
+    :param bbox: (N, 4), ndarray or pytorch tensor
     :param thresh: threshold of IOU for suppression
-    :param score: (N, ), score of each bounding box
+    :param score: (N, ), ndarray or pytorch tensor, score of each bounding box
     :param limit: number of bounding boxes to output
-    :return: (K, 4), darray, bounding boxes after nms. Sorting from highest score to lowest score
+    :return: (K, 4), darray or pytorch tensor, bounding boxes after nms. Sorting from highest score to lowest score
     """
+    # cp.asarray is able to read the buffer object
     bbox_cp = cp.asarray(bbox)
     if score is not None:
         score = cp.asarray(score)
     ind_bbox = _non_maximum_suppression_gpu(bbox_cp, thresh, score, limit)
-    ind_bbox = cp.asnumpy(ind_bbox)
+    # ind_bbox is cupy array
+    # the time to transfer data from GPU to CPU and again back to GPU is 0.004s
+    ind_bbox = torch.from_numpy(ind_bbox.get()).long().cuda()
     selected_bbox = bbox[ind_bbox]
     return ind_bbox, selected_bbox
 
@@ -169,7 +173,7 @@ def _call_nms_kernel(bbox, thresh):
 
 def _nms_gpu_post(mask, n_bbox, threads_per_block, col_blocks):
     n_selection = 0
-    one_ull = np.array([1],dtype=np.uint64)
+    one_ull = np.array([1], dtype=np.uint64)
     selection = np.zeros((n_bbox,), dtype=np.int32)
     remv = np.zeros((col_blocks,), dtype=np.uint64)
 

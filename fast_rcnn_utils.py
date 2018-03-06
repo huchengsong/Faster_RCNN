@@ -9,21 +9,21 @@ def fast_rcnn_loss(roi_score, roi_cls_loc, gt_roi_loc, gt_roi_label, roi_sigma):
     calculate fast rcnn class and regression loss
     :param roi_score: (N, num_classes), pytorch cuda Variable
     :param roi_cls_loc: (N, 4 * num_classes), pytorch cuda Variable
-    :param gt_roi_loc: (N, 4), ndarray
-    :param gt_roi_label: (N, ), ndarray
+    :param gt_roi_loc: (N, 4), pytorch tensor
+    :param gt_roi_label: (N, ), pytorch tensor
     :param roi_sigma: sigma for smooth l1 loss
     :return: pytorch Variable: cls_loss, loc_loss
     """
 
     num_roi = roi_cls_loc.size()[0]
     roi_cls_loc = roi_cls_loc.view(num_roi, -1, 4)
-    gt_roi_label = Variable(torch.from_numpy(gt_roi_label)).long().cuda()
-    gt_roi_loc = Variable(torch.from_numpy(gt_roi_loc)).float().cuda()
     roi_loc = roi_cls_loc[torch.arange(0, num_roi).long().cuda(), gt_roi_label]
 
     # regression loss
+    gt_roi_loc = Variable(gt_roi_loc)
+    gt_roi_label = Variable(gt_roi_label)
     pos_mask = Variable(torch.zeros(num_roi, 4)).cuda()
-    pos_mask[(gt_roi_label > 0).view(-1, 1).expand_as(pos_mask).cuda()] = 1
+    pos_mask[(gt_roi_label > 0).view(-1, 1).expand_as(pos_mask)] = 1
     loc_loss = _smooth_l1_loss(roi_loc, gt_roi_loc, pos_mask, roi_sigma)
     loc_loss = loc_loss/(gt_roi_label >= 0).sum().float()
 

@@ -11,7 +11,7 @@ def voc2012_generate_img_box_dict(xml_dir, img_dir):
     """
     :param xml_dir: xml file directory
     :param img_dir: image file directory
-    :return: a dictionary {img_dir: {image_size: [], object: [name, xmin, ymin, xmax, ymax]}}
+    :return: a dictionary {img_dir: {'image_size': [], 'object': [name, ymin, xmin, ymax, xmax]}}
     """
 
     img_box_dict = {}

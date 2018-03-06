@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from box_parametrize import box_parameterize
-from bbox_IoU import bbox_IoU
+from box_parametrize import box_parameterize_gpu
+from bbox_IoU import bbox_IoU_gpu
 
 
 def generate_training_anchors(roi, gt_bbox, gt_label,
@@ -14,7 +14,7 @@ def generate_training_anchors(roi, gt_bbox, gt_label,
 
     """
     generate ground truth label and location for sampled proposals
-    :param roi: (N, 4) ndarray; region of interest from rpn proposal
+    :param roi: (N, 4) pytorch tensor; region of interest from rpn proposal
     :param gt_bbox: (K, 4) ndarray; ground truth bounding box an image
     :param gt_label: (K, ) ndarray; ground truth label for each bounding box; range[1, class_number]
     :param num_sample: number of sampled roi
@@ -24,139 +24,154 @@ def generate_training_anchors(roi, gt_bbox, gt_label,
     :param neg_iou_thresh_lo: negative iou threshold high end
     :param loc_normalize_mean: mean
     :param loc_normalize_std: standard deviation
-    :return: ndarray: sampled_roi, gt_loc, gt_label
+    :return: pytorch tensor: sampled_roi, gt_loc, gt_label
     """
-    iou_matrix = bbox_IoU(gt_bbox, roi)
-    roi_gt_assignment = iou_matrix.argmax(axis=0)
-    max_iou = iou_matrix.max(axis=0)
+    loc_normalize_mean = torch.cuda.FloatTensor(loc_normalize_mean)
+    loc_normalize_std = torch.cuda.FloatTensor(loc_normalize_std)
+    gt_bbox = torch.from_numpy(gt_bbox).cuda()
+    gt_label = torch.from_numpy(gt_label).long().cuda()
+    iou_matrix = bbox_IoU_gpu(gt_bbox, roi)
+    max_iou, roi_gt_assignment = iou_matrix.max(dim=0)
+
     gt_roi_label = gt_label[roi_gt_assignment]
 
     # sample positive roi and get roi index
     max_num_pos_roi = int(pos_ratio * num_sample)
-    pos_index = np.where(max_iou >= pos_iou_thresh)[0]
-    num_pos_roi = int(min(max_num_pos_roi, len(pos_index)))
+    pos_index = torch.nonzero(max_iou >= pos_iou_thresh).squeeze_()
+    num_pos_roi = int(min(max_num_pos_roi, pos_index.size()[0]))
     if num_pos_roi > 0:
-        pos_index = np.random.choice(pos_index, num_pos_roi, replace=False)
+        pos_index = pos_index[torch.randperm(pos_index.size()[0])[:num_pos_roi].cuda()]
 
     # sample negative roi and get roi index
-    neg_index = np.where((max_iou < neg_iou_thresh_hi) &
-                         (max_iou >= neg_iou_thresh_lo))[0]
+    neg_index = torch.nonzero((max_iou < neg_iou_thresh_hi) &
+                              (max_iou >= neg_iou_thresh_lo)).squeeze_()
     max_num_neg_roi = num_sample - num_pos_roi
-    num_neg_roi = int(min(max_num_neg_roi, len(neg_index)))
+    num_neg_roi = int(min(max_num_neg_roi, neg_index.size()[0]))
     if num_neg_roi > 0:
-        neg_index = np.random.choice(neg_index, num_neg_roi, replace=False)
+        neg_index = neg_index[torch.randperm(neg_index.size()[0])[:num_neg_roi].cuda()]
 
     # get sampled rois and their labels
-    keep_index = np.append(pos_index, neg_index)
+    keep_index = torch.cat((pos_index, neg_index))
     gt_roi_label = gt_roi_label[keep_index]
     gt_roi_label[num_pos_roi:] = 0
     sampled_roi = roi[keep_index]
 
     # get parameterized roi
-    print(len(keep_index))
-    gt_roi_loc = box_parameterize(gt_bbox[roi_gt_assignment[keep_index]], sampled_roi)
+    gt_roi_loc = box_parameterize_gpu(gt_bbox[roi_gt_assignment[keep_index]], sampled_roi)
     gt_roi_loc = (gt_roi_loc - loc_normalize_mean) / loc_normalize_std
 
     return sampled_roi, gt_roi_loc, gt_roi_label
 
 
+# modified for gpu
 def generate_anchor_loc_label(anchor, gt_bbox, img_size,
                               num_sample=256, pos_iou_thresh=0.7,
                               neg_iou_thresh=0.3, pos_ratio=0.5):
-
-    num_anchors = anchor.shape[0]
-
+    """
+    generate ground truth loc and label for anchors
+    :param anchor: (N, 4) pytorch tensor
+    :param gt_bbox: (K, 4) ndrray
+    :param img_size: image size [H, W]
+    :param num_sample: number of output samples
+    :param pos_iou_thresh: threshold for positive anchors
+    :param neg_iou_thresh: threshold for negative anchors
+    :param pos_ratio: ratio of positive samples in output anchors
+    :return: pytorch tensor: anchor_labels (N, ), anchor_gt_parameterized (N, 4)
+    """
+    num_anchors = anchor.size()[0]
+    gt_bbox = torch.from_numpy(gt_bbox).cuda()
     # cross-boundary anchors will not be used
-    ind_inside_img = np.where(
+    ind_inside_img = torch.nonzero(
         (anchor[:, 0] >= 0) &
         (anchor[:, 1] >= 0) &
         (anchor[:, 2] <= img_size[0]) &  # height
         (anchor[:, 3] <= img_size[1])  # width
-    )[0]
+    )[:, 0]
 
     selected_anchors = anchor[ind_inside_img, :]
-    labels = np.empty(selected_anchors.shape[0], dtype=np.int32)
-    labels.fill(-1)
+    labels = torch.cuda.LongTensor(selected_anchors.size()[0]).fill_(-1)
 
-    iou_matrix = bbox_IoU(gt_bbox, selected_anchors)
-    ind_max_each_anchor = iou_matrix.argmax(axis=0)
-    max_iou_each_anchor = iou_matrix.max(axis=0)
+    iou_matrix = bbox_IoU_gpu(gt_bbox, selected_anchors)
+    max_iou_each_anchor, ind_max_each_anchor = iou_matrix.max(dim=0)
 
     # set 1 to positive anchors
     labels[max_iou_each_anchor >= pos_iou_thresh] = 1
     # set 0 to negative anchors
     labels[max_iou_each_anchor <= neg_iou_thresh] = 0
     # set 1 to the anchors that have the highest IoU with a certain ground-truth box
-    max_iou_with_gt = iou_matrix.max(axis=1)
-    ind_max_iou_with_gt = np.where(np.transpose(iou_matrix) == max_iou_with_gt)[0]
+    max_iou_with_gt, _ = iou_matrix.max(dim=1)
+    ind_max_iou_with_gt = torch.nonzero(iou_matrix.t() == max_iou_with_gt)[:, 0]
     labels[ind_max_iou_with_gt] = 1
 
     # if positive anchors are too many, reduce the positive anchor number
     num_pos_sample = int(pos_ratio * num_sample)
-    ind_positive_anchor = np.array(np.where(labels == 1)).flatten()
-    num_positive_anchor = ind_positive_anchor.size
+    ind_positive_anchor = torch.nonzero(labels == 1).squeeze_()
+    num_positive_anchor = ind_positive_anchor.size()[0]
     if num_positive_anchor > num_pos_sample:
-        disable_inds = np.random.choice(
-            ind_positive_anchor,
-            size=int(num_positive_anchor - num_pos_sample),
-            replace=False)
+        disable_inds = \
+            ind_positive_anchor[torch.randperm(num_positive_anchor)[:num_positive_anchor - num_pos_sample].cuda()]
         labels[disable_inds] = -1
 
     # if negative anchors are too many, reduce the negative anchor number
     # if positive anchors are not enough, pad with negative anchors
-    num_neg_sample = num_sample - np.sum(labels == 1)
-    ind_negative_anchor = np.array(np.where(labels == 0)).flatten()
-    num_negative_anchor = ind_negative_anchor.size
+    num_neg_sample = num_sample - torch.nonzero(labels == 1).size()[0]
+    ind_negative_anchor = torch.nonzero(labels == 0).squeeze_()
+    num_negative_anchor = ind_negative_anchor.size()[0]
     if num_negative_anchor > num_neg_sample:
-        disable_inds = np.random.choice(
-            ind_negative_anchor,
-            size=int(num_negative_anchor - num_neg_sample),
-            replace=False)
+        disable_inds = \
+            ind_negative_anchor[torch.randperm(num_negative_anchor)[:num_negative_anchor - num_neg_sample].cuda()]
         labels[disable_inds] = -1
-    print(np.sum(labels == 1), np.sum(labels == 0))
 
-    gt_box_parameterized = box_parameterize(
+    gt_box_parameterized = box_parameterize_gpu(
         gt_bbox[ind_max_each_anchor, :], selected_anchors)
 
-    labels = _unmap(labels, num_anchors, ind_inside_img, fill=-1)
-    gt_box_parameterized = _unmap(gt_box_parameterized, num_anchors, ind_inside_img, fill=0)
+    anchor_labels = _unmap(labels, num_anchors, ind_inside_img, fill=-1)
+    anchor_gt_parameterized = _unmap(gt_box_parameterized, num_anchors, ind_inside_img, fill=0)
 
-    return labels, gt_box_parameterized
+    return anchor_labels, anchor_gt_parameterized
 
 
 def _unmap(data, num_original_data, index_of_data, fill=-1):
     """
-    :param data: data to be unmaped to original size
+    :param data: torch tensor, data to be unmaped to original size
     :param num_original_data: original_matrix.shape[0]
     :param index_of_data: index of data in original matrix
     :param fill: number to be filled in unmaped matrix
-    :return: an unmaped matrix
+    :return: torch tensor, an unmaped matrix
     """
-    if len(data.shape) == 1:
-        ret = np.empty(num_original_data, dtype=data.dtype)
-        ret.fill(fill)
+    if len(list(data.size())) == 1:
+        ret = torch.cuda.LongTensor(num_original_data)
+        ret.fill_(fill)
         ret[index_of_data] = data
     else:
-        ret_shape = np.array(data.shape)
+        ret_shape = list(data.size())
         ret_shape[0] = num_original_data
-        ret = np.empty(ret_shape, dtype=data.dtype)
-        ret.fill(fill)
-        ret[index_of_data, :] = data
+        ret = torch.cuda.FloatTensor(ret_shape[0], ret_shape[1])
+        ret.fill_(fill)
+        ret[index_of_data, 0:4] = data
     return ret
 
 
 def rpn_loss(rpn_score, rpn_loc, gt_rpn_loc, gt_rpn_label, rpn_sigma):
+    """
+    return rpn loss
+    :param rpn_score: (N, num_class), pytroch Variable
+    :param rpn_loc: (N, 4), pytroch Variable
+    :param gt_rpn_loc: (N, 4), pytroch Variable
+    :param gt_rpn_label: (N,), pytroch Variable, range(0, num_class)
+    :param rpn_sigma: sigma for  smooth l1 loss
+    :return: cls_loss, loc_loss
+    """
     # rpn loc loss
     mask = Variable(torch.zeros(gt_rpn_loc.size())).cuda()
     mask[(gt_rpn_label > 0).view(-1, 1).expand_as(mask).cuda()] = 1
     loc_loss = _smooth_l1_loss(rpn_loc, gt_rpn_loc, mask, rpn_sigma)
 
-    # normalize by the number of positive rois
-    loc_loss /= (gt_rpn_label > 0).float().sum()
+    # normalize by the number of positive and negative rois
+    loc_loss /= (gt_rpn_label >= 0).float().sum()
 
     # rpn cls loss
     # nn.CrossEntropy includes LogSoftMax and NLLLoss in one single function
-    # TODO: check whether need normalization
     cls_loss = nn.CrossEntropyLoss(ignore_index=-1)(rpn_score, gt_rpn_label)
 
     return cls_loss, loc_loss
@@ -221,7 +236,14 @@ def test():
     loss = _smooth_l1_loss(x, gt, weight, sigma)
     print(loss)
 
-    # TODO: test rpn_loss()
+    # test rpn_loss()
+    rpn_score = Variable(torch.FloatTensor([[0.7, 0.3], [0.4, 0.6]])).cuda()
+    rpn_loc = Variable(torch.FloatTensor([[0.6, 0.6, 0.6, 0.6], [0.4, 0.4, 0.4, 0.4]])).cuda()
+    gt_rpn_label = Variable(torch.LongTensor([1, -1])).cuda()
+    gt_rpn_loc = Variable(torch.FloatTensor([[0.6, 0.4, 0.6, 0.6], [0.4, 0.4, 0.4, 0.4]])).cuda()
+    cls_loss, loc_loss = rpn_loss(rpn_score, rpn_loc, gt_rpn_loc, gt_rpn_label, rpn_sigma=1)
+    print(nn.Softmax(dim=1)(rpn_score))
+    print(cls_loss, loc_loss)
 
 
 if __name__ == "__main__":
