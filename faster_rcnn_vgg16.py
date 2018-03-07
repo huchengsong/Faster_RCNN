@@ -15,6 +15,7 @@ def load_vgg16():
     model = models.vgg16(pretrained=True)
     features = list(model.features)[:30]
     features = nn.Sequential(*features)
+    # classifier = list(model.classifier)[:6]
     classifier = list(model.classifier)[:3]
     classifier = nn.Sequential(*classifier)
     # requires_grad = False for the first few layers
@@ -82,11 +83,9 @@ class FasterRCNNVGG16(FasterRCNN):
         feature_extractor, classifier = load_vgg16()
         feature_extractor = feature_extractor.cuda()
         classifier = classifier.cuda()
+
         rpn = RPN(512, 512, ratios, scales, stride).cuda()
-        head = VGG16ROIHead(num_class,
-                            roi_size=[7, 7],
-                            spatial_scale=1./stride,
-                            classifier=classifier).cuda()
+        head = VGG16ROIHead(num_class, [7, 7], 1./stride, classifier).cuda()
 
         super(FasterRCNNVGG16, self).__init__(feature_extractor, rpn, head)
 
@@ -97,9 +96,9 @@ class RPN(nn.Module):
         self.stride = stride
         self.scales = scales
         self.ratios = ratios
-        self.anchor_base = generate_base_anchors(stride, ratios, scales)
+        self.anchor_base = generate_base_anchors(self.stride, self.ratios, self.scales)
         self.num_anchor_base = self.anchor_base.shape[0]
-        self.all_anchors = anchor_proposals(64, 64, stride, self.anchor_base)
+        self.all_anchors = anchor_proposals(64, 64, self.stride, self.anchor_base)
         self.leaky_relu = nn.LeakyReLU(0.01)
         self.conv = nn.Conv2d(in_channel, out_channel, 3, stride=1, padding=1)
         self.score = nn.Conv2d(out_channel, self.num_anchor_base * 2, 1, stride=1, padding=0)
@@ -114,10 +113,11 @@ class RPN(nn.Module):
         forward function of RPN
         :param x: extracted features from image tensor, pytroch Variable
         :param img_size: [H, W]
-        :param all_anchors: anchors generate at the beginning of training/testing reusable for each iteration
-        :return: torch Variable: rpn_locs, (N, 4)
+        :param all_anchors: torch tensor, anchors generate at the beginning of training/testing,
+                            reusable for each iteration, (H, W, num_base_anchors, 4)
+        :return: torch Variable: rpn_locs, (N, 4),
                                  rpn_scores, (N, 2)
-                torch tensors: rois, (K, 4)
+                torch tensors: rois, (K, 4),
                          anchors (L, 4)
         """
         n, _, feature_h, feature_w = x.size()
@@ -132,17 +132,14 @@ class RPN(nn.Module):
         rpn_scores = self.score(x)
         rpn_scores = rpn_scores.permute(0, 2, 3, 1).contiguous().view(-1, 2)
         rpn_scores_after_softmax = self.softmax(rpn_scores)
-        rpn_fg_scores = rpn_scores_after_softmax[:, 1].contiguous()
-        from timeit import default_timer as timer
-        a = timer()
+        rpn_fg_scores = rpn_scores_after_softmax[:, 1]
         rois = create_rpn_proposals(rpn_locs.data, rpn_fg_scores.data, anchors, img_size)
-        print('create_rpn_proposals', timer()-a)
 
         return rpn_locs, rpn_scores, rois, anchors
 
 
 class VGG16ROIHead(nn.Module):
-    def __init__(self, num_class, roi_size, spatial_scale, classifier):
+    def __init__(self, num_class, pool_size, spatial_scale, classifier):
         super(VGG16ROIHead, self).__init__()
         self.classifier = classifier
         self.cls_loc = nn.Linear(4096, num_class * 4)
@@ -151,14 +148,18 @@ class VGG16ROIHead(nn.Module):
         initialize_params(self.score, 0, 0.01)
 
         self.num_class = num_class
-        self.roi_size = roi_size
+        self.pool_size = pool_size
         self.spatial_scale = spatial_scale
-        self.roi_pooling = RoIPooling2D(self.roi_size[0],
-                                        self.roi_size[1],
-                                        self.spatial_scale)
+        self.roi_pooling = RoIPooling2D(self.pool_size[0], self.pool_size[1], self.spatial_scale)
 
     def forward(self, x, rois):
-        roi_indices = torch.zeros(rois.size()[0]).float().cuda()
+        """
+        retrun class and location prediction for each roi
+        :param x: pytorch Variable, extracted features
+        :param rois: pytorch tensor, rois generated from rpn proposals
+        :return: pytorch Variable, roi_cls_locs, roi_scores
+        """
+        roi_indices = torch.cuda.FloatTensor(rois.size()[0]).fill_(0)
         indices_and_rois = torch.stack([roi_indices, rois[:, 0], rois[:, 1], rois[:, 2], rois[:, 3]], dim=1)
         xy_indices_and_rois = Variable(indices_and_rois[:, [0, 2, 1, 4, 3]]).contiguous()
 
@@ -173,21 +174,21 @@ class VGG16ROIHead(nn.Module):
 
 def test():
     # test create_rpn_proposals()
-    locs = Variable(torch.zeros((6, 4))).float().cuda()
-    scores = Variable(torch.FloatTensor([1, 0.1, 0.2, 0.3, 0.4, 0.5])).cuda()
-    anchors = np.array([[0, 0, 17, 17],
-                        [0, 0, 100, 100],
-                        [0, 0, 110, 110],
-                        [0, 0, 120, 120],
-                        [200, 200, 300, 300],
-                        [200, 200, 255, 255]])
+    locs = torch.zeros((6, 4)).float().cuda()
+    scores = torch.FloatTensor([1, 0.1, 0.2, 0.3, 0.4, 0.5]).cuda()
+    anchors = torch.cuda.FloatTensor([[0, 0, 17, 17],
+                                      [0, 0, 100, 100],
+                                      [0, 0, 110, 110],
+                                      [0, 0, 120, 120],
+                                      [200, 200, 300, 300],
+                                      [200, 200, 255, 255]])
     img_size = [260, 260]
     roi = create_rpn_proposals(locs, scores, anchors, img_size)
     print(roi)
 
     # test anchor_proposals()
     anchor_base = generate_base_anchors(16, [0.5, 1.0, 2.0], [8, 16, 32])
-    anchors = anchor_proposals(16, 16, 16, anchor_base)
+    anchors = anchor_proposals(16, 16, 16, anchor_base).view(-1, 4)
 
     center = (anchors[:, [0, 1]] + anchors[:, [2, 3]])/2
     print(center[[9 * i for i in range(16 * 16)], :]/16)
@@ -213,7 +214,7 @@ def test():
         img_size = img_info['img_size']
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         img_tensor = Variable(normalize(torch.from_numpy(np.transpose(img / 255, (2, 0, 1))))).float()
-        img_tensor = torch.unsqueeze(img_tensor, 0).cuda()
+        img_tensor = torch.unsqueeze_(img_tensor, 0).cuda()
         feature = fast_rcnn.extractor(img_tensor)
         rpn_locs, rpn_scores, rois, anchors = fast_rcnn.rpn(feature, img_size)
         roi_cls_locs, roi_scores = fast_rcnn.head(feature, rois)

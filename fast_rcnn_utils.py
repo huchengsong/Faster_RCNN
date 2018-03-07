@@ -22,7 +22,7 @@ def fast_rcnn_loss(roi_score, roi_cls_loc, gt_roi_loc, gt_roi_label, roi_sigma):
     # regression loss
     gt_roi_loc = Variable(gt_roi_loc)
     gt_roi_label = Variable(gt_roi_label)
-    pos_mask = Variable(torch.zeros(num_roi, 4)).cuda()
+    pos_mask = Variable(torch.cuda.FloatTensor(num_roi, 4).fill_(0))
     pos_mask[(gt_roi_label > 0).view(-1, 1).expand_as(pos_mask)] = 1
     loc_loss = _smooth_l1_loss(roi_loc, gt_roi_loc, pos_mask, roi_sigma)
     loc_loss = loc_loss/(gt_roi_label >= 0).sum().float()
@@ -63,18 +63,18 @@ def test_smooth_l1_loss():
 
 
 def test_fast_rcnn_loss():
-    import numpy as np
-    roi_score = Variable(torch.FloatTensor([[0.8, 0.2], [0.6, 0.4], [0.4, 0.6]])).cuda()
-    roi_cls_loc = Variable(torch.FloatTensor([[0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2],
+    roi_score = Variable(torch.cuda.FloatTensor([[0.8, 0.2], [0.6, 0.4], [0.4, 0.6]]))
+    roi_cls_loc = Variable(torch.cuda.FloatTensor([[0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2],
                                               [0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4],
-                                              [0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6]])).cuda()
-    gt_roi_loc = np.array([[0.2, 0.2, 0.2, 0.2], [0.4, 2, 0.4, 0.4], [0.6, 0.6, 0.6, 0.6]]).astype(np.float32)
-    gt_roi_label = np.array([1, 1, 1]).astype(np.float32)
+                                              [0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6]]))
+    gt_roi_loc = torch.cuda.FloatTensor([[0.2, 0.2, 0.2, 0.2], [0.4, 2, 0.4, 0.4], [0.6, 0.6, 0.6, 0.6]])
+    gt_roi_label = torch.cuda.LongTensor([1, 1, 1])
     roi_sigma = 1
     softmax = nn.Softmax(dim=1)
     roi_score_softmax = softmax(roi_score)
     cls_loss, loc_loss = fast_rcnn_loss(roi_score, roi_cls_loc, gt_roi_loc, gt_roi_label, roi_sigma)
     print(roi_score_softmax)
+    # ground truth cls_loss = 0.8113, loc_loss = 0.3667
     print(cls_loss, loc_loss)
 
 

@@ -145,12 +145,24 @@ def test_speed(num_box):
     start = timer()
     result = box_parameterize(array, array)
     end = timer()
-    print(end - start)
+    print('CPU', end - start)
 
     start = timer()
     box_deparameterize(result, array)
     end = timer()
-    print(end - start)
+    print('CPU', end - start)
+
+    # tes gpu
+    array = torch.from_numpy(array).cuda()
+    start = timer()
+    result = box_parameterize_gpu(array, array)
+    end = timer()
+    print('GPU', end - start)
+
+    start = timer()
+    box_deparameterize_gpu(result, array)
+    end = timer()
+    print('GPU', end - start)
 
 
 if __name__ == '__main__':

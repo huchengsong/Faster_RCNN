@@ -10,7 +10,7 @@ from trainer import FasterRCNNTrainer
 from rescale_image import rescale_image
 
 
-def generate_train_val_test_data(img_dict_dir, p_train=0.6, p_val=0.2):
+def generate_train_val_test_data(img_dict_dir, p_train=0.7, p_val=0.1):
     """
     retrun training, validation, test subsample
     :param img_dict_dir: dictionary storing image directory and labeling
@@ -37,18 +37,13 @@ def create_img_tensor(img):
     :return: [1, C, H, W], normalized img_tensor in range (0, 1)
     """
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-
     img_tensor = Variable(normalize(torch.from_numpy(np.transpose(img.astype(np.float32) / 255, (2, 0, 1)))))
-
-    from timeit import default_timer as timer
-    a = timer()
     img_tensor = img_tensor.cuda()
-    print('to Variable', timer() - a)
     img_tensor = img_tensor.unsqueeze_(0)
 
     return img_tensor
 
-
+# TODO: finish evaluation function
 def eval(img_dict, faster_rcnn, test_num=10000):
     for i, [img_dir, img_info] in tqdm(enumerate(img_dict.items())):
         img, img_info = rescale_image(img_dir, img_info)
@@ -64,16 +59,12 @@ def train(epochs=10, pretrained_model=None):
     if pretrained_model:
         trainer.load(pretrained_model)
         print('load pretrained model from {}'.format(pretrained_model))
-    j = 0
+
     for epoch in range(epochs):
         for i, [img_dir, img_info] in tqdm(enumerate(dict_train.items())):
             img, img_info = rescale_image(img_dir, img_info)
             img_tensor = create_img_tensor(img)
             trainer.train_step(img_tensor, img_info)
-            j = j + 1
-            if j == 50:
-                break
-        break
 
 
 def test():

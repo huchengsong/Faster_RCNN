@@ -27,29 +27,34 @@ def non_maximum_suppression_rpn(bbox, thresh, score=None, limit=None):
 def non_maximum_suppression_roi(box_scores, bboxes, class_list, score_threshold, iou_threshold):
     """
     using non maximum suppression to reduce bbox number
-    :param box_scores: (N, class_num) ndarray
-    :param bboxes: (N, 4 * class_num) ndarray
+    :param box_scores: (N, class_num) pytorch tensor
+    :param bboxes: (N, 4 * class_num) pytorch tensor
     :param class_list: list of class ID that NMS apply to
     :param score_threshold: score threshold for box selection
     :param iou_threshold: iou threshold
-    :return: label (K, ), score (K, ), box (K, 4)
+    :return: ndarray: label (K, ), score (K, ), box (K, 4)
     """
     bbox_result = []
     score_result = []
     label_result = []
 
-    class_pred = np.argmax(box_scores, axis=1)
+    _, class_pred = box_scores.max(dim=1)
+
     for class_id in class_list:
-        index = np.where((class_pred == class_id) &
-                         (box_scores[:, class_id] > score_threshold))
-        if np.array(index).size == 0:
+        index = torch.nonzero((class_pred == class_id) &
+                              (box_scores[:, class_id] > score_threshold)).squeeze_()
+        if len(index) == 0:
             continue
-        score_candidate = box_scores[index, class_id].flatten()
-        box_candidate = bboxes[index, class_id * 4:(class_id + 1) * 4].reshape(-1, 4)
+        score_candidate = box_scores[:, class_id][index]
+        box_candidate = bboxes[:, class_id * 4:(class_id + 1) * 4][index, :]
 
         ind_bbox, selected_bbox = non_maximum_suppression_rpn(box_candidate, iou_threshold, score_candidate)
         selected_score = score_candidate[ind_bbox]
-        selected_label = np.full(ind_bbox.shape, class_id)
+
+        # tensor to numpy array
+        selected_bbox = selected_bbox.cpu().numpy()
+        selected_score = selected_score.cpu().numpy()
+        selected_label = np.full(selected_score.shape, class_id)
 
         bbox_result.append(selected_bbox)
         score_result.append(selected_score)
@@ -193,9 +198,9 @@ def _nms_gpu_post(mask, n_bbox, threads_per_block, col_blocks):
 
 def test():
     # test non_maximum_suppression_rpn()
-    bbox = np.array([[0, 0, 100, 100], [0, 0, 75, 75], [100, 100, 200, 200]])
+    bbox = torch.cuda.FloatTensor([[0, 0, 100, 100], [0, 0, 75, 75], [100, 100, 200, 200]])
     thresh = 0.5
-    score = np.array([0.5, 0.7, 0.8])
+    score = torch.cuda.FloatTensor([0.5, 0.7, 0.8])
     limit = 3
     ind, box = non_maximum_suppression_rpn(bbox, thresh, score, limit=limit)
     print(box)
@@ -205,30 +210,30 @@ def test():
     #     return np.exp(x) / np.exp(x).sum(axis=axis)[:, None]
     # box_scores = softmax(np.random.rand(10, 3), axis=1)
     # print(box_scores)
-    box_scores = np.array([[0.35629722, 0.29934438, 0.34435839],
-                           [0.33190525, 0.43829933, 0.22979542],
-                           [0.35513699, 0.39927991, 0.24558309],
-                           [0.43057433, 0.33340436, 0.23602131],
-                           [0.33935831, 0.20390023, 0.45674146],
-                           [0.37249841, 0.30570373, 0.32179787],
-                           [0.47038923, 0.23873957, 0.2908712 ],
-                           [0.28352702, 0.31179673, 0.40467625],
-                           [0.22726669, 0.47013369, 0.30259961],
-                           [0.39092056, 0.27074105, 0.33833839]])
+    box_scores = torch.cuda.FloatTensor([[1.0, 0, 0],
+                                         [1.1, 0, 0],
+                                         [0, 1.2, 0],
+                                         [0, 1.3, 0],
+                                         [0, 0, 1.0],
+                                         [0, 0, 1.1],
+                                         [0, 1.2, 0],
+                                         [0, 1.4, 0],
+                                         [0.9, 0, 0],
+                                         [1.2, 0, 0]])
 
-    bboxes = np.array([[0, 0, 100, 100],
-                       [0, 0, 110, 110],
-                       [0, 0, 125, 125],
-                       [0, 0, 150, 150],
-                       [0, 0, 100, 100],
-                       [0, 0, 110, 110],
-                       [0, 0, 125, 125],
-                       [0, 0, 150, 150],
-                       [500, 500, 600, 600],
-                       [500, 500, 650, 650]])
+    bboxes = torch.cuda.FloatTensor([[0, 0, 100, 100],
+                                     [0, 0, 110, 110],
+                                     [0, 0, 125, 125],
+                                     [0, 0, 150, 150],
+                                     [0, 0, 100, 100],
+                                     [0, 0, 110, 110],
+                                     [0, 0, 125, 125],
+                                     [0, 0, 150, 150],
+                                     [500, 500, 600, 600],
+                                     [500, 500, 650, 650]])
     class_label, box_score, box = \
         non_maximum_suppression_roi(box_scores,
-                                    np.concatenate((bboxes, bboxes, bboxes), axis=1),
+                                    bboxes.repeat(1,3),
                                     [0, 1, 2],
                                     score_threshold=0,
                                     iou_threshold=0.5)

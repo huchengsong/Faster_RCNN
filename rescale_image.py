@@ -47,6 +47,7 @@ if __name__ == '__main__':
         print(img_info)
         image, image_info = rescale_image(img_dir, img_info)
         print(img_info)
+        print(image.shape)
         for object in img_info['objects']:
             ymin, xmin, ymax, xmax = [int(i) for i in object[1:5]]
             cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)

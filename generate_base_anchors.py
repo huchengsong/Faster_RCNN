@@ -65,9 +65,18 @@ def anchor_proposals(feature_height, feature_width, stride, anchor_base):
     return anchors
 
 
-if __name__ == '__main__':
+def test():
     a = generate_base_anchors(ratios=[0.5, 0.75, 1, 1.5, 2])
-    print(a.dt)
-    print((a[:, 2] - a[:, 0] + 1) / 2)
-    print((a[:, 3] - a[:, 1] + 1) / 2)
     print(a)
+
+    # test anchor_proposals()
+    anchor_base = generate_base_anchors(16, [0.5, 1.0, 2.0], [8, 16, 32])
+    anchors = anchor_proposals(16, 16, 16, anchor_base).view(-1, 4)
+
+    center = (anchors[:, [0, 1]] + anchors[:, [2, 3]]) / 2
+    print(anchors[:100])
+    print(center[[9 * i for i in range(16 * 16)], :] / 16)
+
+
+if __name__ == '__main__':
+    test()

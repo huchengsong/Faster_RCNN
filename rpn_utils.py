@@ -38,17 +38,17 @@ def generate_training_anchors(roi, gt_bbox, gt_label,
     # sample positive roi and get roi index
     max_num_pos_roi = int(pos_ratio * num_sample)
     pos_index = torch.nonzero(max_iou >= pos_iou_thresh).squeeze_()
-    num_pos_roi = int(min(max_num_pos_roi, pos_index.size()[0]))
+    num_pos_roi = int(min(max_num_pos_roi, len(pos_index)))
     if num_pos_roi > 0:
-        pos_index = pos_index[torch.randperm(pos_index.size()[0])[:num_pos_roi].cuda()]
+        pos_index = pos_index[torch.randperm(len(pos_index))[:num_pos_roi].cuda()]
 
     # sample negative roi and get roi index
     neg_index = torch.nonzero((max_iou < neg_iou_thresh_hi) &
                               (max_iou >= neg_iou_thresh_lo)).squeeze_()
     max_num_neg_roi = num_sample - num_pos_roi
-    num_neg_roi = int(min(max_num_neg_roi, neg_index.size()[0]))
+    num_neg_roi = int(min(max_num_neg_roi, len(neg_index)))
     if num_neg_roi > 0:
-        neg_index = neg_index[torch.randperm(neg_index.size()[0])[:num_neg_roi].cuda()]
+        neg_index = neg_index[torch.randperm(len(neg_index))[:num_neg_roi].cuda()]
 
     # get sampled rois and their labels
     keep_index = torch.cat((pos_index, neg_index))
@@ -86,10 +86,10 @@ def generate_anchor_loc_label(anchor, gt_bbox, img_size,
         (anchor[:, 1] >= 0) &
         (anchor[:, 2] <= img_size[0]) &  # height
         (anchor[:, 3] <= img_size[1])  # width
-    )[:, 0]
+    ).squeeze_()
 
     selected_anchors = anchor[ind_inside_img, :]
-    labels = torch.cuda.LongTensor(selected_anchors.size()[0]).fill_(-1)
+    labels = torch.cuda.LongTensor(len(ind_inside_img)).fill_(-1)
 
     iou_matrix = bbox_IoU_gpu(gt_bbox, selected_anchors)
     max_iou_each_anchor, ind_max_each_anchor = iou_matrix.max(dim=0)
@@ -106,7 +106,7 @@ def generate_anchor_loc_label(anchor, gt_bbox, img_size,
     # if positive anchors are too many, reduce the positive anchor number
     num_pos_sample = int(pos_ratio * num_sample)
     ind_positive_anchor = torch.nonzero(labels == 1).squeeze_()
-    num_positive_anchor = ind_positive_anchor.size()[0]
+    num_positive_anchor = len(ind_positive_anchor)
     if num_positive_anchor > num_pos_sample:
         disable_inds = \
             ind_positive_anchor[torch.randperm(num_positive_anchor)[:num_positive_anchor - num_pos_sample].cuda()]
@@ -114,9 +114,9 @@ def generate_anchor_loc_label(anchor, gt_bbox, img_size,
 
     # if negative anchors are too many, reduce the negative anchor number
     # if positive anchors are not enough, pad with negative anchors
-    num_neg_sample = num_sample - torch.nonzero(labels == 1).size()[0]
+    num_neg_sample = num_sample - len(torch.nonzero(labels == 1).squeeze_())
     ind_negative_anchor = torch.nonzero(labels == 0).squeeze_()
-    num_negative_anchor = ind_negative_anchor.size()[0]
+    num_negative_anchor = len(ind_negative_anchor)
     if num_negative_anchor > num_neg_sample:
         disable_inds = \
             ind_negative_anchor[torch.randperm(num_negative_anchor)[:num_negative_anchor - num_neg_sample].cuda()]
@@ -199,30 +199,32 @@ def _smooth_l1_loss(x, gt, mask, sigma):
 
 def test():
     # test generate_training_anchors(roi, gt_bbox, gt_label)
-    roi = np.array([[0, 0, 100, 100],
-                    [0, 0, 110, 110],
-                    [0, 0, 125, 125],
-                    [0, 0, 150, 150],
-                    [500, 500, 600, 600],
-                    [500, 500, 650, 650]])
+    roi = torch.cuda.FloatTensor([[0, 0, 100, 100],
+                                  [0, 0, 110, 110],
+                                  [0, 0, 125, 125],
+                                  [0, 0, 150, 150],
+                                  [500, 500, 600, 600],
+                                  [500, 500, 650, 650]])
     gt_bbox = np.array([[0, 0, 105, 105],
-                       [500, 500, 600, 600]])
+                       [500, 500, 600, 600]]).astype(np.float32)
     gt_label = np.array([1, 2])
-    sampled_roi, gt_roi_loc, gt_label = generate_training_anchors(roi, gt_bbox, gt_label, num_sample=6, pos_ratio=0.5)
+    sampled_roi, gt_roi_loc, gt_label = generate_training_anchors(roi, gt_bbox, gt_label, num_sample=4, pos_ratio=0.5)
     print('sampled_roi', sampled_roi)
-    print('gt_roi_loc', (gt_roi_loc*[0.1, 0.1, 0.2, 0.2])+[0, 0, 0, 0])
+    print('gt_roi_loc', (gt_roi_loc*torch.cuda.FloatTensor([0.1, 0.1, 0.2, 0.2]))+torch.cuda.FloatTensor([0, 0, 0, 0]))
     print('gt_label', gt_label)
 
     # test generate_anchor_loc_label()
-    anchor = np.array([[0, 0, 10, 10],
-                       [0, 0, 100, 100],
-                       [0, 0, 110, 110],
-                       [0, 0, 125, 125],
-                       [0, 0, 150, 150],
-                       [500, 500, 600, 600],
-                       [500, 500, 650, 650]])
+    anchor = torch.cuda.FloatTensor([[0, 0, 10, 10],
+                                     [0, 0, 100, 100],
+                                     [0, 0, 110, 110],
+                                     [0, 0, 125, 125],
+                                     [0, 0, 150, 150],
+                                     [500, 500, 600, 600],
+                                     [500, 500, 650, 650],
+                                     [200, 300, 300, 400],
+                                     [200, 300, 350, 450]])
     gt_bbox = np.array([[0, 0, 105, 105],
-                        [500, 500, 600, 600]])
+                        [500, 500, 600, 600]]).astype(np.float32)
     img_size = [600, 600]
     gt_label, gt_loc = generate_anchor_loc_label(anchor, gt_bbox, img_size, num_sample=6)
     print('gt_label', gt_label)
@@ -240,7 +242,7 @@ def test():
     rpn_score = Variable(torch.FloatTensor([[0.7, 0.3], [0.4, 0.6]])).cuda()
     rpn_loc = Variable(torch.FloatTensor([[0.6, 0.6, 0.6, 0.6], [0.4, 0.4, 0.4, 0.4]])).cuda()
     gt_rpn_label = Variable(torch.LongTensor([1, -1])).cuda()
-    gt_rpn_loc = Variable(torch.FloatTensor([[0.6, 0.4, 0.6, 0.6], [0.4, 0.4, 0.4, 0.4]])).cuda()
+    gt_rpn_loc = Variable(torch.FloatTensor([[0.6, 2, 0.6, 0.6], [0.4, 0.6, 0.4, 0.4]])).cuda()
     cls_loss, loc_loss = rpn_loss(rpn_score, rpn_loc, gt_rpn_loc, gt_rpn_label, rpn_sigma=1)
     print(nn.Softmax(dim=1)(rpn_score))
     print(cls_loss, loc_loss)

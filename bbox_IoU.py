@@ -54,17 +54,18 @@ def bbox_IoU_gpu(boxes, query_boxes):
     intersection_h_2, _ = torch.max(torch.stack((boxes[:, 0].expand(K, N).t(),
                                                  query_boxes[:, 0].expand(N, K)), dim=0), dim=0)
     intersection_h = intersection_h_1 - intersection_h_2 + 1
+    intersection_h.clamp_(min=0)
 
     intersection_w_1, _ = torch.min(torch.stack((boxes[:, 3].expand(K, N).t(),
                                                  query_boxes[:, 3].expand(N, K)), dim=0), dim=0)
     intersection_w_2, _ = torch.max(torch.stack((boxes[:, 1].expand(K, N).t(),
                                                  query_boxes[:, 1].expand(N, K)), dim=0), dim=0)
     intersection_w = intersection_w_1 - intersection_w_2 + 1
+    intersection_w.clamp_(min=0)
 
     intersection_area = intersection_w * intersection_h
     union_area = boxes_area + query_box_area - intersection_area
     IoU = intersection_area / union_area
-    IoU = torch.clamp(IoU, min=0)
     return IoU
 
 
