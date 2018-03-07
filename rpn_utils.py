@@ -8,9 +8,7 @@ from bbox_IoU import bbox_IoU_gpu
 
 def generate_training_anchors(roi, gt_bbox, gt_label,
                               num_sample=128, pos_ratio=0.25, pos_iou_thresh=0.5,
-                              neg_iou_thresh_hi=0.5, neg_iou_thresh_lo=0.0,
-                              loc_normalize_mean=(0., 0., 0., 0.),
-                              loc_normalize_std=(0.1, 0.1, 0.2, 0.2),):
+                              neg_iou_thresh_hi=0.5, neg_iou_thresh_lo=0.0):
 
     """
     generate ground truth label and location for sampled proposals
@@ -22,12 +20,8 @@ def generate_training_anchors(roi, gt_bbox, gt_label,
     :param pos_iou_thresh: positive iou threshold
     :param neg_iou_thresh_hi: negative iou threshold low end
     :param neg_iou_thresh_lo: negative iou threshold high end
-    :param loc_normalize_mean: mean
-    :param loc_normalize_std: standard deviation
     :return: pytorch tensor: sampled_roi, gt_loc, gt_label
     """
-    loc_normalize_mean = torch.cuda.FloatTensor(loc_normalize_mean)
-    loc_normalize_std = torch.cuda.FloatTensor(loc_normalize_std)
     gt_bbox = torch.from_numpy(gt_bbox).cuda()
     gt_label = torch.from_numpy(gt_label).long().cuda()
     iou_matrix = bbox_IoU_gpu(gt_bbox, roi)
@@ -58,7 +52,6 @@ def generate_training_anchors(roi, gt_bbox, gt_label,
 
     # get parameterized roi
     gt_roi_loc = box_parameterize_gpu(gt_bbox[roi_gt_assignment[keep_index]], sampled_roi)
-    gt_roi_loc = (gt_roi_loc - loc_normalize_mean) / loc_normalize_std
 
     return sampled_roi, gt_roi_loc, gt_roi_label
 
@@ -157,18 +150,21 @@ def rpn_loss(rpn_score, rpn_loc, gt_rpn_loc, gt_rpn_label, rpn_sigma):
     return rpn loss
     :param rpn_score: (N, num_class), pytroch Variable
     :param rpn_loc: (N, 4), pytroch Variable
-    :param gt_rpn_loc: (N, 4), pytroch Variable
-    :param gt_rpn_label: (N,), pytroch Variable, range(0, num_class)
+    :param gt_rpn_loc: (N, 4), pytroch tensor
+    :param gt_rpn_label: (N,), pytroch tensor, range(0, num_class)
     :param rpn_sigma: sigma for  smooth l1 loss
     :return: cls_loss, loc_loss
     """
+    gt_rpn_loc = Variable(gt_rpn_loc)
+    gt_rpn_label = Variable(gt_rpn_label)
+
     # rpn loc loss
-    mask = Variable(torch.zeros(gt_rpn_loc.size())).cuda()
-    mask[(gt_rpn_label > 0).view(-1, 1).expand_as(mask).cuda()] = 1
+    mask = Variable(torch.cuda.FloatTensor(gt_rpn_loc.size()).fill_(0))
+    mask[(gt_rpn_label > 0).view(-1, 1).expand_as(mask)] = 1
     loc_loss = _smooth_l1_loss(rpn_loc, gt_rpn_loc, mask, rpn_sigma)
 
     # normalize by the number of positive and negative rois
-    loc_loss /= (gt_rpn_label >= 0).float().sum()
+    loc_loss = loc_loss / (gt_rpn_label >= 0).float().sum()
 
     # rpn cls loss
     # nn.CrossEntropy includes LogSoftMax and NLLLoss in one single function

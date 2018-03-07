@@ -8,17 +8,11 @@ from box_parametrize import box_deparameterize_gpu
 
 
 class FasterRCNN(nn.Module):
-    def __init__(self, extractor, rpn, head,
-                 loc_normalize_mean=[0., 0., 0., 0.],
-                 loc_normalize_std=[0.1, 0.1, 0.2, 0.2],
-                 num_class=21):
+    def __init__(self, extractor, rpn, head, num_class=21):
         super(FasterRCNN, self).__init__()
         self.extractor = extractor
         self.rpn = rpn
         self.head = head
-
-        self.loc_normalize_mean = loc_normalize_mean
-        self.loc_normalize_std = loc_normalize_std
         self.num_class = num_class
 
         self.optimizer = self.get_optimizer(lr=1e-3)
@@ -53,12 +47,6 @@ class FasterRCNN(nn.Module):
         img_tensor = Variable(img_tensor, volatile=True)
         roi_cls_loc, roi_scores, rois = self(img_tensor)
         roi_scores = nn.Softmax(dim=1)(roi_scores.data).data
-
-        # (1, 4*n_class)
-        mean = torch.cuda.FloatTensor(self.loc_normalize_mean).expand(self.num_class, -1).contiguous().view(1, -1)
-        std = torch.cuda.FloatTensor(self.loc_normalize_std).expand(self.num_class, -1).contiguous().view(1, -1)
-
-        roi_cls_loc = (roi_cls_loc * std + mean)
         roi_cls_loc = roi_cls_loc.view(-1, 4)
 
         rois = rois.view(-1, 1, 4).repeat(1, self.num_class, 1).view(-1, 4)

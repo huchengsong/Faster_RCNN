@@ -31,13 +31,14 @@ def voc2012_generate_img_box_dict(xml_dir, img_dir):
             img_box_dict[img_path]['objects'] = []
 
             for obj in root.iter('object'):
-                name = obj.find('name').text
-                bndbox = obj.find('bndbox')
-                xmin = float(bndbox.find('xmin').text)
-                ymin = float(bndbox.find('ymin').text)
-                xmax = float(bndbox.find('xmax').text)
-                ymax = float(bndbox.find('ymax').text)
-                img_box_dict[img_path]['objects'].append([name, ymin, xmin, ymax, xmax])
+                if obj.find('difficult').text == '0':
+                    name = obj.find('name').text
+                    bndbox = obj.find('bndbox')
+                    xmin = float(bndbox.find('xmin').text)
+                    ymin = float(bndbox.find('ymin').text)
+                    xmax = float(bndbox.find('xmax').text)
+                    ymax = float(bndbox.find('ymax').text)
+                    img_box_dict[img_path]['objects'].append([name, ymin, xmin, ymax, xmax])
     return img_box_dict
 
 
