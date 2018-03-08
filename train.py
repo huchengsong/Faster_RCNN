@@ -62,6 +62,8 @@ def train(epochs=10, pretrained_model=None):
 
     for epoch in range(epochs):
         for i, [img_dir, img_info] in tqdm(enumerate(dict_train.items())):
+            if len(img_info['objects']) == 0:
+                continue
             img, img_info = rescale_image(img_dir, img_info)
             img_tensor = create_img_tensor(img)
             trainer.train_step(img_tensor, img_info, img)
