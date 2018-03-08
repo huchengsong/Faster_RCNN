@@ -20,6 +20,9 @@ class FasterRCNNTrainer(nn.Module):
         img_size = img_info['img_size']
         features = self.faster_rcnn.extractor(img_tensor)
 
+        if len(img_info['objects']) == 0:
+            return 0
+
         gt_bbox = np.array(img_info['objects'])[:, 1:5].astype(np.float32)
         gt_label = np.array(img_info['objects'])[:, 0]
         gt_label = text_to_num(gt_label)
