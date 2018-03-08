@@ -1,5 +1,6 @@
 import numpy as np
 from torch import nn
+import torch
 from rpn_utils import generate_anchor_loc_label, generate_training_anchors
 from torch.autograd import Variable
 
@@ -21,7 +22,7 @@ class FasterRCNNTrainer(nn.Module):
         features = self.faster_rcnn.extractor(img_tensor)
 
         if len(img_info['objects']) == 0:
-            return 0
+            return Variable(torch.cuda.FloatTensor(1).fill_(0))
 
         gt_bbox = np.array(img_info['objects'])[:, 1:5].astype(np.float32)
         gt_label = np.array(img_info['objects'])[:, 0]
