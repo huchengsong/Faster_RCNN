@@ -15,8 +15,8 @@ def load_vgg16():
     model = models.vgg16(pretrained=True)
     features = list(model.features)[:30]
     features = nn.Sequential(*features)
-    # classifier = list(model.classifier)[:6]
-    classifier = list(model.classifier)[:3]
+    classifier = list(model.classifier)[:6]
+    # classifier = list(model.classifier)[:3]
     classifier = nn.Sequential(*classifier)
     # requires_grad = False for the first few layers
     for i in range(10):

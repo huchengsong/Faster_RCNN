@@ -122,3 +122,14 @@ class FasterRCNNTrainer(nn.Module):
         print('total loss', loss.data.cpu().numpy())
         loss.backward()
         self.optimizer.step()
+
+    def save(self, save_path):
+        save_dict = dict()
+        save_dict['model'] = self.faster_rcnn.state_dict()
+        torch.save(save_dict, save_path)
+        print('model saved as ' + save_path)
+
+    def load(self, load_path):
+        state_dict = torch.load(load_path)
+        self.faster_rcnn.load_state_dict(state_dict['model'])
+        print('model_loaded from ' + load_path)

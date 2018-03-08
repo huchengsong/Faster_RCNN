@@ -8,7 +8,8 @@ from torchvision import transforms
 from faster_rcnn_vgg16 import FasterRCNNVGG16
 from trainer import FasterRCNNTrainer
 from rescale_image import rescale_image
-
+from convert_label import text_to_num
+from eval_tool import eval_detection_voc
 
 def generate_train_val_test_data(img_dict_dir, p_train=0.7, p_val=0.1):
     """
@@ -43,17 +44,37 @@ def create_img_tensor(img):
 
     return img_tensor
 
-# TODO: finish evaluation function
-def eval(img_dict, faster_rcnn, test_num=10000):
-    for i, [img_dir, img_info] in tqdm(enumerate(img_dict.items())):
+
+def evaluation(eval_dict, faster_rcnn, test_num=10000):
+    bboxes, labels, scores = list(), list(), list()
+    gt_bboxes, gt_labels = list(), list()
+    for i, [img_dir, img_info] in tqdm(enumerate(eval_dict.items())):
+        if len(img_info['objects']) == 0:
+            continue
         img, img_info = rescale_image(img_dir, img_info)
         img_tensor = create_img_tensor(img)
+        box, score, label = faster_rcnn.predict(img_tensor)
+        print(box.shape, score.shape, label.shape)
+        gt_bbox = np.array(img_info['objects'])[:, 1:5].astype(np.float32)
+        gt_label = np.array(img_info['objects'])[:, 0]
+        gt_label = text_to_num(gt_label)
+        print(gt_label.shape)
+        bboxes.append(list(box))
+        labels.append(list(label))
+        scores.append(list(score))
+        gt_bboxes.append(list(gt_bbox))
+        gt_labels.append(list(gt_label))
+        if i == test_num:
+            break
+
+    result = eval_detection_voc(
+        box, label, score, gt_bbox, gt_label, use_07_metric=True)
+    return result
 
 
-def train(epochs=10, pretrained_model=None):
-    dict_train, dict_val, dict_test = \
-        generate_train_val_test_data('../VOCdevkit/img_box_dict.npy')
+def train(epochs, dict_train, pretrained_model=None):
     faster_rcnn = FasterRCNNVGG16().cuda()
+    faster_rcnn.get_optimizer()
     print('model constructed')
     trainer = FasterRCNNTrainer(faster_rcnn).cuda()
     if pretrained_model:
@@ -67,6 +88,8 @@ def train(epochs=10, pretrained_model=None):
             img, img_info = rescale_image(img_dir, img_info)
             img_tensor = create_img_tensor(img)
             trainer.train_step(img_tensor, img_info, img)
+            if i % 2500 == 0:
+                trainer.save('fast_rcnn_model.pt')
 
 
 def test():
@@ -88,6 +111,20 @@ def test():
 
 
 if __name__ == '__main__':
-    with torch.autograd.profiler.profile() as prof:
-        train()
-    print(prof)
+    from os.path import isfile
+    if not (isfile('dict_train.npy') and isfile('dict_val.npy') and isfile('dict_test.npy')):
+        dict_train, dict_val, dict_test = \
+            generate_train_val_test_data('../VOCdevkit/img_box_dict.npy')
+        np.save('dict_train.npy', dict_train)
+        np.save('dict_test.npy', dict_test)
+        np.save('dict_val.npy', dict_val)
+
+    dict_train = np.load('dict_train.npy')[()]
+    train(epochs=10, dict_train=dict_train)
+    #
+    # dict_test = np.load('dict_test.npy')[()]
+    # faster_rcnn = FasterRCNNVGG16().cuda()
+    # state_dict = torch.load('fast_rcnn_model.pt')
+    # faster_rcnn.load_state_dict(state_dict['model'])
+    # result = evaluation(dict_test, faster_rcnn, test_num=10)
+    # print(result)

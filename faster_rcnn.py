@@ -14,8 +14,7 @@ class FasterRCNN(nn.Module):
         self.rpn = rpn
         self.head = head
         self.num_class = num_class
-
-        self.optimizer = self.get_optimizer(lr=1e-3)
+        self.optimizer = None
 
     def forward(self, x):
         """
@@ -28,6 +27,7 @@ class FasterRCNN(nn.Module):
         img_size = x.size()[2:4]
         x = self.extractor(x)
         _, _, _, rois = self.rpn(x, img_size)
+        rois = rois[:1024]
         roi_cls_locs, roi_scores = self.head(x, rois)
 
         return roi_cls_locs, roi_scores, rois
@@ -44,24 +44,23 @@ class FasterRCNN(nn.Module):
         self.eval()
         img_size = img_tensor.size()[2:4]
 
-        img_tensor = Variable(img_tensor, volatile=True)
         roi_cls_loc, roi_scores, rois = self(img_tensor)
-        roi_scores = nn.Softmax(dim=1)(roi_scores.data).data
-        roi_cls_loc = roi_cls_loc.view(-1, 4)
+        roi_scores = nn.Softmax(dim=1)(roi_scores).data
+        roi_cls_loc = roi_cls_loc.view(-1, 4).data
 
         rois = rois.view(-1, 1, 4).repeat(1, self.num_class, 1).view(-1, 4)
         cls_bbox = box_deparameterize_gpu(roi_cls_loc, rois)
 
         # clip bounding boxes
-        cls_bbox[: [0, 2]] = cls_bbox[: [0, 2]].clamp(0, img_size[0])
-        cls_bbox[: [1, 3]] = cls_bbox[: [1, 3]].clamp(0, img_size[1])
+        cls_bbox[:, [0, 2]] = cls_bbox[:, [0, 2]].clamp(0, img_size[0])
+        cls_bbox[:, [1, 3]] = cls_bbox[:, [1, 3]].clamp(0, img_size[1])
         cls_bbox = cls_bbox.view(-1, self.num_class * 4)
 
-        label, score, box = non_maximum_suppression_roi(roi_scores, cls_bbox,
-                                                        np.arange(1, 21),
-                                                        score_thresh, nms_thresh)
+        box, score, label = non_maximum_suppression_roi(roi_scores, cls_bbox,
+                                                        range(0, 21),
+                                                        score_thresh=0, iou_thresh=0.3)
         self.train()
-        return label, score, box
+        return box, score, label
 
     def get_optimizer(self, lr=1e-3):
         params = []
@@ -71,8 +70,8 @@ class FasterRCNN(nn.Module):
                     params.append({'params': [value], 'lr': lr * 2, 'weight_decay': 0})
                 else:
                     params.append({'params': [value], 'lr': lr, 'weight_decay': 0.0005})
-        optimizer = torch.optim.Adam(params)
-        return optimizer
+        # optimizer = torch.optim.Adam(params)
+        self.optimizer = torch.optim.SGD(params, momentum=0.9)
 
     def scale_lr(self, decay=0.1):
         for param_group in self.optimizer.param_groups:

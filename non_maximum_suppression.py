@@ -24,14 +24,14 @@ def non_maximum_suppression_rpn(bbox, thresh, score=None, limit=None):
     return ind_bbox, selected_bbox
 
 
-def non_maximum_suppression_roi(box_scores, bboxes, class_list, score_threshold, iou_threshold):
+def non_maximum_suppression_roi(box_scores, bboxes, class_list, score_thresh, iou_thresh):
     """
     using non maximum suppression to reduce bbox number
     :param box_scores: (N, class_num) pytorch tensor
     :param bboxes: (N, 4 * class_num) pytorch tensor
     :param class_list: list of class ID that NMS apply to
-    :param score_threshold: score threshold for box selection
-    :param iou_threshold: iou threshold
+    :param score_thresh: score threshold for box selection
+    :param iou_thresh: iou threshold
     :return: ndarray: label (K, ), score (K, ), box (K, 4)
     """
     bbox_result = []
@@ -42,20 +42,20 @@ def non_maximum_suppression_roi(box_scores, bboxes, class_list, score_threshold,
 
     for class_id in class_list:
         index = torch.nonzero((class_pred == class_id) &
-                              (box_scores[:, class_id] > score_threshold)).squeeze_()
+                              (box_scores[:, class_id] > score_thresh)).squeeze_()
         if len(index) == 0:
             continue
         score_candidate = box_scores[:, class_id][index]
         box_candidate = bboxes[:, class_id * 4:(class_id + 1) * 4][index, :]
 
-        ind_bbox, selected_bbox = non_maximum_suppression_rpn(box_candidate, iou_threshold, score_candidate)
+        ind_bbox, selected_bbox = non_maximum_suppression_rpn(box_candidate, iou_thresh, score_candidate)
         selected_score = score_candidate[ind_bbox]
 
         # tensor to numpy array
         selected_bbox = selected_bbox.cpu().numpy()
         selected_score = selected_score.cpu().numpy()
         selected_label = np.full(selected_score.shape, class_id)
-
+        print(selected_bbox, selected_score, selected_label)
         bbox_result.append(selected_bbox)
         score_result.append(selected_score)
         label_result.append(selected_label)
