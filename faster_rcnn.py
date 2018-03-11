@@ -1,14 +1,13 @@
 import torch
 from non_maximum_suppression import non_maximum_suppression_roi
-from torch.autograd import Variable
-import numpy as np
 from torch import nn
 
+from configure import Config
 from box_parametrize import box_deparameterize_gpu
 
 
 class FasterRCNN(nn.Module):
-    def __init__(self, extractor, rpn, head, num_class=21):
+    def __init__(self, extractor, rpn, head, num_class=Config.num_class):
         super(FasterRCNN, self).__init__()
         self.extractor = extractor
         self.rpn = rpn
@@ -26,21 +25,20 @@ class FasterRCNN(nn.Module):
         """
         img_size = x.size()[2:4]
         x = self.extractor(x)
-        _, _, _, rois = self.rpn(x, img_size)
-        rois = rois[:1024]
+        _, _, rois, _ = self.rpn(x, img_size)
         roi_cls_locs, roi_scores = self.head(x, rois)
 
         return roi_cls_locs, roi_scores, rois
 
-    def predict(self, img_tensor, nms_thresh=0.3, score_thresh=0.7):
+    def predict(self, img_tensor, score_thresh=Config.score_thresh, iou_thresh=Config.iou_thresh):
         """
         bounding box prediction
         :param img_tensor: preprocessed image tensor
-        :param nms_thresh: nms threshold
+        :param iou_thresh: iou threshold for nms
         :param score_thresh: score threshold
         :return: ndarray: label (N, ), score (N, ), box (N, 4)
         """
-        # self.eval() set the module in training mode: self.train(False)
+        # self.eval() set the module in evaluation mode: self.train(False)
         self.eval()
         img_size = img_tensor.size()[2:4]
 
@@ -56,23 +54,21 @@ class FasterRCNN(nn.Module):
         cls_bbox[:, [1, 3]] = cls_bbox[:, [1, 3]].clamp(0, img_size[1])
         cls_bbox = cls_bbox.view(-1, self.num_class * 4)
 
-        box, score, label = non_maximum_suppression_roi(roi_scores, cls_bbox,
-                                                        range(0, 21),
-                                                        score_thresh=0, iou_thresh=0.3)
+        box, score, label = non_maximum_suppression_roi(roi_scores, cls_bbox, range(1, Config.num_class),
+                                                        score_thresh=score_thresh, iou_thresh=iou_thresh)
         self.train()
         return box, score, label
 
-    def get_optimizer(self, lr=1e-3):
+    def get_optimizer(self, lr):
         params = []
         for key, value in dict(self.named_parameters()).items():
             if value.requires_grad:
                 if 'bias' in key:
                     params.append({'params': [value], 'lr': lr * 2, 'weight_decay': 0})
                 else:
-                    params.append({'params': [value], 'lr': lr, 'weight_decay': 0.0005})
-        # optimizer = torch.optim.Adam(params)
+                    params.append({'params': [value], 'lr': lr, 'weight_decay': Config.weight_decay})
         self.optimizer = torch.optim.SGD(params, momentum=0.9)
 
-    def scale_lr(self, decay=0.1):
+    def scale_lr(self, decay):
         for param_group in self.optimizer.param_groups:
             param_group['lr'] *= decay

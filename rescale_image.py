@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+from configure import Config
+
 
 def rescale_image(img_dir, img_info):
     """
@@ -10,27 +12,29 @@ def rescale_image(img_dir, img_info):
     :return: rescaled_image
     :return: modified_img_info: modified image info
     """
+    min_size = Config.img_min_size
+    max_size = Config.img_max_size
     image = cv2.imread(img_dir)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     height = img_info['img_size'][0]
     width = img_info['img_size'][1]
     if height >= width:
-        scale_ratio = 600 / width
-        width_rescaled = 600
+        scale_ratio = min_size / width
+        width_rescaled = min_size
         height_rescaled = int(height * scale_ratio)
-        if height_rescaled > 1000:
-            scale_ratio = 1000 / height
-            height_rescaled = 1000
+        if height_rescaled > max_size:
+            scale_ratio = max_size / height
+            height_rescaled = max_size
             width_rescaled = int(width * scale_ratio)
         rescaled_img = cv2.resize(image, (width_rescaled, height_rescaled))
 
     if height < width:
-        scale_ratio = 600 / height
-        height_rescaled = 600
+        scale_ratio = min_size / height
+        height_rescaled = min_size
         width_rescaled = int(width * scale_ratio)
-        if width_rescaled > 1000:
-            scale_ratio = 1000 / width
-            width_rescaled = 1000
+        if width_rescaled > max_size:
+            scale_ratio = max_size / width
+            width_rescaled = max_size
             height_rescaled = int(height * scale_ratio)
         rescaled_img = cv2.resize(image, (width_rescaled, height_rescaled))
 

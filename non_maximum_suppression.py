@@ -55,7 +55,6 @@ def non_maximum_suppression_roi(box_scores, bboxes, class_list, score_thresh, io
         selected_bbox = selected_bbox.cpu().numpy()
         selected_score = selected_score.cpu().numpy()
         selected_label = np.full(selected_score.shape, class_id)
-        print(selected_bbox, selected_score, selected_label)
         bbox_result.append(selected_bbox)
         score_result.append(selected_score)
         label_result.append(selected_label)

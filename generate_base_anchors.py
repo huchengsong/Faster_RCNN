@@ -1,9 +1,10 @@
 import numpy as np
 import torch
-from torch.autograd import Variable
+
+from configure import Config
 
 
-def generate_base_anchors(base_size=16, ratios=[0.5, 1, 2], scales=[8, 16, 32]):
+def generate_base_anchors(base_size=Config.stride, ratios=Config.ratios, scales=Config.scales):
     """
     Generate anchor with reference window [0, 0, 15, 15]
     Reference window: [up_left_x, up_left_y, bottom_right_x, bottom_right_y]

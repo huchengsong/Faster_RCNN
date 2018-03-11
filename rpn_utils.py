@@ -5,11 +5,13 @@ from torch.autograd import Variable
 from box_parametrize import box_parameterize_gpu
 from bbox_IoU import bbox_IoU_gpu
 
+from configure import Config
 
-def generate_training_anchors(roi, gt_bbox, gt_label,
-                              num_sample=128, pos_ratio=0.25, pos_iou_thresh=0.5,
-                              neg_iou_thresh_hi=0.5, neg_iou_thresh_lo=0.0):
 
+def generate_training_anchors(roi, gt_bbox, gt_label, num_sample=Config.roi_num_sample,
+                              pos_ratio=Config.roi_pos_ratio, pos_iou_thresh=Config.roi_pos_iou_thresh,
+                              neg_iou_thresh_hi=Config.roi_neg_iou_thresh_hi,
+                              neg_iou_thresh_lo=Config.roi_neg_iou_thresh_lo):
     """
     generate ground truth label and location for sampled proposals
     :param roi: (N, 4) pytorch tensor; region of interest from rpn proposal
@@ -56,10 +58,9 @@ def generate_training_anchors(roi, gt_bbox, gt_label,
     return sampled_roi, gt_roi_loc, gt_roi_label
 
 
-# modified for gpu
 def generate_anchor_loc_label(anchor, gt_bbox, img_size,
-                              num_sample=256, pos_iou_thresh=0.7,
-                              neg_iou_thresh=0.3, pos_ratio=0.5):
+                              num_sample=Config.rpn_num_sample, pos_iou_thresh=Config.rpn_pos_iou_thresh,
+                              neg_iou_thresh=Config.rpn_neg_iou_thresh, pos_ratio=Config.rpn_pos_ratio):
     """
     generate ground truth loc and label for anchors
     :param anchor: (N, 4) pytorch tensor
@@ -164,7 +165,7 @@ def rpn_loss(rpn_score, rpn_loc, gt_rpn_loc, gt_rpn_label, rpn_sigma):
     loc_loss = _smooth_l1_loss(rpn_loc, gt_rpn_loc, mask, rpn_sigma)
 
     # normalize by the number of positive and negative rois
-    loc_loss = loc_loss / (gt_rpn_label >= 0).float().sum()
+    loc_loss = Config.lambda_rpn_loc * loc_loss / (gt_rpn_label >= 0).float().sum()
 
     # rpn cls loss
     # nn.CrossEntropy includes LogSoftMax and NLLLoss in one single function
@@ -206,7 +207,7 @@ def test():
     gt_label = np.array([1, 2])
     sampled_roi, gt_roi_loc, gt_label = generate_training_anchors(roi, gt_bbox, gt_label, num_sample=4, pos_ratio=0.5)
     print('sampled_roi', sampled_roi)
-    print('gt_roi_loc', (gt_roi_loc*torch.cuda.FloatTensor([0.1, 0.1, 0.2, 0.2]))+torch.cuda.FloatTensor([0, 0, 0, 0]))
+    print('gt_roi_loc', gt_roi_loc)
     print('gt_label', gt_label)
 
     # test generate_anchor_loc_label()
@@ -237,8 +238,8 @@ def test():
     # test rpn_loss()
     rpn_score = Variable(torch.FloatTensor([[0.7, 0.3], [0.4, 0.6]])).cuda()
     rpn_loc = Variable(torch.FloatTensor([[0.6, 0.6, 0.6, 0.6], [0.4, 0.4, 0.4, 0.4]])).cuda()
-    gt_rpn_label = Variable(torch.LongTensor([1, -1])).cuda()
-    gt_rpn_loc = Variable(torch.FloatTensor([[0.6, 2, 0.6, 0.6], [0.4, 0.6, 0.4, 0.4]])).cuda()
+    gt_rpn_label = torch.LongTensor([1, -1]).cuda()
+    gt_rpn_loc = torch.FloatTensor([[0.6, 2, 0.6, 0.6], [0.4, 0.6, 0.4, 0.4]]).cuda()
     cls_loss, loc_loss = rpn_loss(rpn_score, rpn_loc, gt_rpn_loc, gt_rpn_label, rpn_sigma=1)
     print(nn.Softmax(dim=1)(rpn_score))
     print(cls_loss, loc_loss)

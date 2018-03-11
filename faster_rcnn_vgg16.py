@@ -9,15 +9,20 @@ from box_parametrize import box_deparameterize_gpu
 from roi_module import RoIPooling2D
 from faster_rcnn import FasterRCNN
 from non_maximum_suppression import non_maximum_suppression_rpn
+from configure import Config
 
 
 def load_vgg16():
     model = models.vgg16(pretrained=True)
     features = list(model.features)[:30]
     features = nn.Sequential(*features)
+
     classifier = list(model.classifier)[:6]
-    # classifier = list(model.classifier)[:3]
+    if not Config.use_drop:
+        del classifier[5]
+        del classifier[2]
     classifier = nn.Sequential(*classifier)
+
     # requires_grad = False for the first few layers
     for i in range(10):
         for param in features[i].parameters():
@@ -38,24 +43,22 @@ def create_rpn_proposals(locs, scores, anchors, img_size):
     :param scores: (N, ), pytorch tensor of RPN prediction
     :param anchors: (N, 4), pytorch tensor
     :param img_size: [height, width]
-    :return: [K, 4], pytorch tensor, rpn proposals
+    :return: (K, 4), pytorch tensor, rpn proposals
     """
-    nms_thresh = 0.7
-    num_pre_nms = 12000
-    num_post_nms = 2000
-    min_size = 16
+    nms_thresh = Config.nms_thresh
+    num_pre_nms = Config.num_pre_nms
+    num_post_nms = Config.num_post_nms
+    min_size = Config.min_size
     img_h = img_size[0]
     img_w = img_size[1]
 
     rois = box_deparameterize_gpu(locs, anchors)
 
     # take top num_pre_nms rois and scores
-
     _, order = torch.sort(scores, descending=True)
     order = order[:num_pre_nms]
     rois = rois[order, :].contiguous()
     scores = scores[order].contiguous()
-
 
     # clip bbox to image size
     rois[rois < 0] = 0
@@ -78,7 +81,8 @@ def create_rpn_proposals(locs, scores, anchors, img_size):
 
 
 class FasterRCNNVGG16(FasterRCNN):
-    def __init__(self, num_class=21, ratios=[0.5, 1., 2.], scales=[8, 16, 32], stride=16):
+    def __init__(self, num_class=Config.num_class, ratios=Config.ratios,
+                 scales=Config.scales, stride=Config.stride):
         # load pre-trained model
         feature_extractor, classifier = load_vgg16()
         feature_extractor = feature_extractor.cuda()

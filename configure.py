@@ -1,0 +1,68 @@
+class Config:
+    num_class = 21
+    class_key = ['background', 'aeroplane', 'bicycle', 'bird',
+                 'boat', 'bottle', 'bus', 'car',
+                 'cat', 'chair', 'cow', 'diningtable',
+                 'dog', 'horse', 'motorbike', 'person',
+                 'pottedplant', 'sheep', 'sofa', 'train',
+                 'tvmonitor']
+
+    img_box_dict = '../VOCdevkit/img_box_dict.npy'
+    img_min_size = 600  # image resize
+    img_max_size = 1000  # image resize
+
+    # anchor params
+    ratios = [0.5, 1., 2.]
+    scales = [8, 16, 32]
+    stride = 16
+
+    # sigma for l1_smooth_loss
+    rpn_sigma = 3.
+    roi_sigma = 1.
+
+    # param for optimizer
+    weight_decay = 0.0005
+    lr_decay = 0.1
+    lr = 1e-3
+
+    # param for creating rpn proposals
+    nms_thresh = 0.7
+    num_pre_nms = 12000
+    num_post_nms = 2000
+    min_size = 16
+
+    # params for creating rois for fast-rcnn training
+    roi_num_sample = 128
+    roi_pos_ratio = 0.25
+    roi_pos_iou_thresh = 0.5
+    roi_neg_iou_thresh_hi = 0.5
+    roi_neg_iou_thresh_lo = 0.0
+
+    # params for rpn training
+    rpn_num_sample = 256
+    rpn_pos_iou_thresh = 0.7
+    rpn_neg_iou_thresh = 0.3
+    rpn_pos_ratio = 0.5
+
+    # regression loss lambda
+    lambda_rpn_loc = 5
+    lambda_roi_loc = 5
+
+    # training
+    epoch = 10
+
+    # predict param
+    score_thresh = 0.7
+    iou_thresh = 0.3
+
+    # evaluation
+    eval_num = 10000
+    eval_score_thresh = 0.7
+    eval_iou_thresh = 0.3
+
+    # use dropout in RoIHead
+    use_drop = False
+
+    # model
+    load_path = None
+

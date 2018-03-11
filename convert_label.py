@@ -1,11 +1,7 @@
 import numpy as np
+from configure import Config
 
-KEY = ['background', 'aeroplane', 'bicycle', 'bird',
-       'boat', 'bottle', 'bus', 'car',
-       'cat', 'chair', 'cow', 'diningtable',
-       'dog', 'horse', 'motorbike', 'person',
-       'pottedplant', 'sheep', 'sofa', 'train',
-       'tvmonitor']
+KEY = Config.class_key
 
 
 def text_to_num(label_text):
@@ -28,6 +24,7 @@ def num_to_text(label_num):
     label_text = [KEY[i] for i in label_num]
 
     return np.array(label_text)
+
 
 def test():
     label_text = np.array(['background', 'aeroplane', 'bicycle', 'bird',
