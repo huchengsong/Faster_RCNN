@@ -302,3 +302,30 @@ def calc_detection_voc_ap(prec, rec, use_07_metric=False):
             ap[l] = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
 
     return ap
+
+
+def test():
+    boxes = []
+    labels = []
+    scores = [np.array([0.9, 0.5, 0.6]), np.array([0.3, 0.6])]
+    b_1 = np.array([[0, 0, 100, 100],
+                    [100, 100, 200, 200],
+                    [100, 100, 230, 230]])
+    boxes.append(b_1)
+    b_2 = np.array([[0, 0, 150, 150],
+                    [100, 100, 250, 250]])
+    boxes.append(b_2)
+    l_1 = np.array([1, 2, 3])
+    labels.append(l_1)
+    l_2 = np.array([1, 2])
+    labels.append(l_2)
+    gt_bboxes = [np.array([[0, 0, 110, 110]]),
+                 np.array([[100, 100, 210, 210]])]
+    gt_labels = [np.array([1]), np.array([2])]
+
+    prec, rec = calc_detection_voc_prec_rec(boxes, labels, scores, gt_bboxes, gt_labels)
+    print(prec, rec)
+
+
+if __name__ == "__main__":
+    test()

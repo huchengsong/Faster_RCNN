@@ -218,7 +218,7 @@ def test():
         img_size = img_info['img_size']
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         img_tensor = Variable(normalize(torch.from_numpy(np.transpose(img / 255, (2, 0, 1))))).float()
-        img_tensor = torch.unsqueeze_(img_tensor, 0).cuda()
+        img_tensor = torch.unsqueeze(img_tensor, 0).cuda()
         feature = fast_rcnn.extractor(img_tensor)
         rpn_locs, rpn_scores, rois, anchors = fast_rcnn.rpn(feature, img_size)
         roi_cls_locs, roi_scores = fast_rcnn.head(feature, rois)

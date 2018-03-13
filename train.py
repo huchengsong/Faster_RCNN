@@ -62,11 +62,11 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
         gt_bbox = np.array(img_info['objects'])[:, 1:5].astype(np.float32)
         gt_label = np.array(img_info['objects'])[:, 0]
         gt_label = text_to_num(gt_label)
-        bboxes.append(list(box))
-        labels.append(list(label))
-        scores.append(list(score))
-        gt_bboxes.append(list(gt_bbox))
-        gt_labels.append(list(gt_label))
+        bboxes.append(box)
+        labels.append(label)
+        scores.append(score)
+        gt_bboxes.append(gt_bbox)
+        gt_labels.append(gt_label)
         if i == test_num:
             break
 
@@ -125,20 +125,20 @@ def train(epochs, dict_train, pretrained_model=Config.load_path):
 
 
 if __name__ == '__main__':
-    from os.path import isfile
-    if not (isfile('dict_train.npy') and isfile('dict_val.npy') and isfile('dict_test.npy')):
-        dict_train, dict_val, dict_test = \
-            generate_train_val_test_data(Config.img_box_dict)
-        np.save('dict_train.npy', dict_train)
-        np.save('dict_test.npy', dict_test)
-        np.save('dict_val.npy', dict_val)
-
-    dict_train = np.load('dict_train.npy')[()]
-    train(epochs=Config.epoch, dict_train=dict_train)
+    # from os.path import isfile
+    # if not (isfile('dict_train.npy') and isfile('dict_val.npy') and isfile('dict_test.npy')):
+    #     dict_train, dict_val, dict_test = \
+    #         generate_train_val_test_data(Config.img_box_dict)
+    #     np.save('dict_train.npy', dict_train)
+    #     np.save('dict_test.npy', dict_test)
+    #     np.save('dict_val.npy', dict_val)
+    #
+    # dict_train = np.load('dict_train.npy')[()]
+    # train(epochs=Config.epoch, dict_train=dict_train)
     # #
-    # dict_test = np.load('dict_test.npy')[()]
-    # faster_rcnn = FasterRCNNVGG16().cuda()
-    # state_dict = torch.load('fast_rcnn_model.pt')
-    # faster_rcnn.load_state_dict(state_dict['model'])
-    # result = evaluation(dict_test, faster_rcnn, test_num=100)
-    # print(result)
+    dict_test = np.load('dict_test.npy')[()]
+    faster_rcnn = FasterRCNNVGG16().cuda()
+    state_dict = torch.load('faster_rcnn_model.pt')
+    faster_rcnn.load_state_dict(state_dict['model'])
+    result = evaluation(dict_test, faster_rcnn, test_num=100)
+    print(result)
