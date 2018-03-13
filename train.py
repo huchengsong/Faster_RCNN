@@ -98,7 +98,7 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
         # ########################################
 
     result = eval_detection_voc(
-        box, label, score, gt_bbox, gt_label, use_07_metric=True)
+        bboxes, labels, scores, gt_bboxes, gt_labels, use_07_metric=True)
     return result
 
 
