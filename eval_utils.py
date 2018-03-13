@@ -1,10 +1,13 @@
-import numpy as np
 from collections import defaultdict
+
+import numpy as np
+
 from bbox_IoU import bbox_IoU
 from configure import Config
 
+
 def eval_detection_voc(bboxes, labels, scores, gt_bboxes, gt_labels,
-                       iou_thresh=0.5, use_07_metric=False):
+                       iou_thresh=0.5):
     """
     Calculate average precisions
     :param bboxes: list of N ndarray (K, 4)
@@ -13,9 +16,11 @@ def eval_detection_voc(bboxes, labels, scores, gt_bboxes, gt_labels,
     :param gt_bboxes: list of N ndarray (J, 4)
     :param gt_labels: list of N ndarray (J, )
     :param iou_thresh: threshold
-    :param use_07_metric: bool
     :return:
     """
+
+    prec, rec = calc_precision_recall(bboxes, labels, scores, gt_bboxes, gt_labels, iou_thresh)
+    return calc_ap(prec, rec)
 
 
 def calc_precision_recall(bboxes, labels, scores, gt_bboxes,
@@ -29,6 +34,7 @@ def calc_precision_recall(bboxes, labels, scores, gt_bboxes,
     :param gt_bboxes: list of N ndarray (J, 4)
     :param gt_labels: list of N ndarray (J, )
     :param iou_thresh: threshold
+    :param num_class: classes
     :return: prec, rec: list (num_class-1, ), with cumulative recall and precision for each class
     """
     n_pos = defaultdict(int)
@@ -58,36 +64,40 @@ def calc_precision_recall(bboxes, labels, scores, gt_bboxes,
             gt_l = gt_labels_i == l
             gt_box_l = gt_boxes_i[gt_l]
 
-            # record the number of prediction bbox for class l
-            # record the score for class l
-            n_pos[l] += (len(pred_box_l))
-            score[l].extend(pred_score_l)
+            # add the number of gt bbox for class l
+            n_pos[l] += (len(gt_box_l))
 
+            # there is no prediction box for class l
             if len(pred_box_l) == 0:
-                continue
-            if len(gt_box_l) == 0:
+                pass
+            # there is no gt box for class l
+            elif len(gt_box_l) == 0:
+                # record the score for class l
+                score[l].extend(pred_score_l)
                 match[l].extend([0] * len(pred_score_l))
-                continue
+            else:
+                # record the score for class l
+                score[l].extend(pred_score_l)
+                # calculate iou
+                iou = bbox_IoU(gt_box_l, pred_box_l)
+                # assign index with iou smaller than iou_thresh to -1
+                gt_index = iou.argmax(axis=0)
+                gt_index[iou.max(axis=0) < iou_thresh] = -1
 
-            # calculate iou
-            iou = bbox_IoU(gt_box_l, pred_box_l)
-            # assign index with iou smaller than iou_thresh to -1
-            gt_index = iou.argmax(axis=0)
-            gt_index[iou.max(axis=0) < iou_thresh] = -1
-
-            select = np.zeros(len(gt_box_l), dtype=np.bool)
-            for gt_idx in gt_index:
-                if gt_idx >= 0:
-                    if not select[gt_idx]:
-                        match[l].append(1)
+                select = np.zeros(len(gt_box_l), dtype=np.bool)
+                for gt_idx in gt_index:
+                    if gt_idx >= 0:
+                        if not select[gt_idx]:
+                            match[l].append(1)
+                        else:
+                            match[l].append(0)
+                        # if two bounding box are predicted
+                        # for the same gt box, the second one
+                        # will be assigned as 0
+                        select[gt_idx] = True
                     else:
                         match[l].append(0)
-                    # if two bounding box are predicted
-                    # for the same gt box, the second one
-                    # will be assigned as 0
-                    select[gt_idx] = True
-                else:
-                    match[l].append(0)
+
     print(match, score, n_pos)
     prec = [None] * num_class
     rec = [None] * num_class
@@ -108,6 +118,17 @@ def calc_precision_recall(bboxes, labels, scores, gt_bboxes,
             rec[l] = tp / n_pos[l]
 
     return prec, rec
+
+
+def calc_ap(prec, rec):
+    classes = len(prec)
+    ap = np.empty(classes)
+    for l in range(classes):
+        if prec[l] is None or rec[l] is None:
+            ap[l] = np.nan
+        else:
+            # todo finish it
+            pass
 
 
 def test():
