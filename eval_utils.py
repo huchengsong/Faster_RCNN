@@ -6,8 +6,7 @@ from bbox_IoU import bbox_IoU
 from configure import Config
 
 
-def calc_map(bboxes, labels, scores, gt_bboxes, gt_labels,
-                       iou_thresh=0.5):
+def calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, iou_thresh=0.5):
     """
     Calculate average precisions
     :param bboxes: list of N ndarray (K, 4)

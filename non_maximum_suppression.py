@@ -59,7 +59,9 @@ def non_maximum_suppression_roi(box_scores, bboxes, class_list, score_thresh, io
         score_result += selected_score
         label_result += selected_label
 
-    return np.array(bbox_result), np.array(score_result), np.array(label_result)
+    return np.array(bbox_result).astype(np.float32), \
+           np.array(score_result).astype(np.float32), \
+           np.array(label_result).astype(np.int32)
 
 
 @cp.util.memoize(for_each_device=True)

@@ -75,6 +75,7 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
         gt_labels.append(gt_label)
         if i == test_num:
             break
+
         """
         # ########################################
         # ########### test code ##################
@@ -143,7 +144,7 @@ if __name__ == '__main__':
     img_dir = '../VOCdevkit2007/VOC2007/JPEGImages'
     img_box_dict = voc_generate_img_box_dict(xml_dir, img_dir)
     dict_train, dict_val = generate_train_val_data(img_box_dict)
-    train(1, dict_train, dict_val)
+    train(10, dict_train, dict_val)
 
     xml_dir = '../VOCtest2007/VOC2007/Annotations'
     img_dir = '../VOCtest2007/VOC2007/JPEGImages'
