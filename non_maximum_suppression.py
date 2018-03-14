@@ -51,15 +51,15 @@ def non_maximum_suppression_roi(box_scores, bboxes, class_list, score_thresh, io
         ind_bbox, selected_bbox = non_maximum_suppression_rpn(box_candidate, iou_thresh, score_candidate)
         selected_score = score_candidate[ind_bbox]
 
-        # tensor to numpy array
-        selected_bbox = selected_bbox.cpu().numpy()
-        selected_score = selected_score.cpu().numpy()
-        selected_label = np.full(selected_score.shape, class_id)
-        bbox_result.append(selected_bbox)
-        score_result.append(selected_score)
-        label_result.append(selected_label)
+        # tensor to list
+        selected_bbox = list(selected_bbox.cpu().numpy())
+        selected_score = list(selected_score.cpu().numpy())
+        selected_label = [class_id] * len(selected_score)
+        bbox_result += selected_bbox
+        score_result += selected_score
+        label_result += selected_label
 
-    return np.concatenate(bbox_result), np.concatenate(score_result), np.concatenate(label_result)
+    return np.array(bbox_result), np.array(score_result), np.array(label_result)
 
 
 @cp.util.memoize(for_each_device=True)

@@ -9,7 +9,7 @@ from faster_rcnn_vgg16 import FasterRCNNVGG16
 from trainer import FasterRCNNTrainer
 from rescale_image import rescale_image
 from convert_label import text_to_num
-from eval_tool import eval_detection_voc
+from eval_utils import calc_map
 from configure import Config
 
 
@@ -48,6 +48,14 @@ def create_img_tensor(img):
 
 
 def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
+    """
+    return mean average precision
+    :param eval_dict: dictionary with information of images to be evaluated
+    :param faster_rcnn: trained faster rcnn model
+    :param test_num: the number of images to be tested
+    :return: mean average precision
+    """
+
     bboxes, labels, scores = list(), list(), list()
     gt_bboxes, gt_labels = list(), list()
     for i, [img_dir, img_info] in tqdm(enumerate(eval_dict.items())):
@@ -69,7 +77,7 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
         gt_labels.append(gt_label)
         if i == test_num:
             break
-
+        """
         # ########################################
         # ########### test code ##################
         # ########################################
@@ -96,10 +104,9 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
         # ########################################
         # ########### test code ##################
         # ########################################
-
-    result = eval_detection_voc(
-        bboxes, labels, scores, gt_bboxes, gt_labels, use_07_metric=True)
-    return result
+        """
+    _, mAP = calc_map(bboxes, labels, scores, gt_bboxes, gt_labels)
+    return mAP
 
 
 def train(epochs, dict_train, pretrained_model=Config.load_path):
@@ -140,5 +147,5 @@ if __name__ == '__main__':
     faster_rcnn = FasterRCNNVGG16().cuda()
     state_dict = torch.load('faster_rcnn_model.pt')
     faster_rcnn.load_state_dict(state_dict['model'])
-    result = evaluation(dict_test, faster_rcnn, test_num=100)
-    print(result)
+    mAP = evaluation(dict_test, faster_rcnn, test_num=100)
+    print(mAP)

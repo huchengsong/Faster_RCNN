@@ -56,7 +56,7 @@ class Config:
     iou_thresh = 0.3
 
     # evaluation
-    eval_num = 10000
+    eval_num = float("inf")
     eval_score_thresh = 0.7
     eval_iou_thresh = 0.3
 
