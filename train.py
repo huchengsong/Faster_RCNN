@@ -11,26 +11,24 @@ from rescale_image import rescale_image
 from convert_label import text_to_num
 from eval_utils import calc_map
 from configure import Config
+from voc_parse_xml import voc_generate_img_box_dict
 
 
-def generate_train_val_test_data(img_dict_dir, p_train=0.7, p_val=0.1):
+def generate_train_val_data(img_dict, p_train=0.8):
     """
     retrun training, validation, test subsample
-    :param img_dict_dir: dictionary storing image directory and labeling
+    :param img_dict: dictionary storing image directory and labeling
     :param p_train: ratio of training images
-    :param p_val: ratio of validation images
     :return: dict_train, dict_val, dict_test
     """
-    img_dict = np.load(img_dict_dir)[()]
     total_imgs = len(img_dict)
     num_train_imgs = int(total_imgs * p_train)
-    num_val_imgs = int(total_imgs * p_val)
     img_dict_items = list(img_dict.items())
     np.random.shuffle(img_dict_items)
-    dict_train, dict_val, dict_test = \
-        np.split(img_dict_items, [num_train_imgs, num_train_imgs + num_val_imgs])
-    dict_train, dict_val, dict_test = dict(dict_train), dict(dict_val), dict(dict_test)
-    return dict_train, dict_val, dict_test
+    dict_train, dict_val = \
+        np.split(img_dict_items, [num_train_imgs])
+    dict_train, dict_val = dict(dict_train), dict(dict_val)
+    return dict_train, dict_val
 
 
 def create_img_tensor(img):
@@ -109,43 +107,49 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
     return mAP
 
 
-def train(epochs, dict_train, pretrained_model=Config.load_path):
+def train(epochs, dict_train, dict_val, pretrained_model=Config.load_path):
+
     faster_rcnn = FasterRCNNVGG16().cuda()
     faster_rcnn.get_optimizer(Config.lr)
     print('model constructed')
     trainer = FasterRCNNTrainer(faster_rcnn).cuda()
     if pretrained_model:
         trainer.load(pretrained_model)
-
+    max_map = 0
     for epoch in range(epochs):
+        print('epoch: ', epoch)
         for i, [img_dir, img_info] in tqdm(enumerate(dict_train.items())):
             if len(img_info['objects']) == 0:
                 continue
             img, img_info = rescale_image(img_dir, img_info)
             img_tensor = create_img_tensor(img)
             trainer.train_step(img_tensor, img_info)
-            if (i + 1) % 2500 == 0:
-                trainer.save('faster_rcnn_model.pt')
+
+        # save the model with better evaluation result
+        map = evaluation(dict_val, faster_rcnn, test_num=Config.eval_num)
+        print('mAP: ', map, 'max mAP: ', max_map)
+        if map > max_map:
+            max_map = map
+            trainer.save('faster_rcnn_model.pt')
+            print('new model saved')
+
+        # lr decay
         if epoch == 7:
             trainer.faster_rcnn.scale_lr(Config.lr_decay)
-    trainer.save('faster_rcnn_model.pt')
 
 
 if __name__ == '__main__':
-    # from os.path import isfile
-    # if not (isfile('dict_train.npy') and isfile('dict_val.npy') and isfile('dict_test.npy')):
-    #     dict_train, dict_val, dict_test = \
-    #         generate_train_val_test_data(Config.img_box_dict)
-    #     np.save('dict_train.npy', dict_train)
-    #     np.save('dict_test.npy', dict_test)
-    #     np.save('dict_val.npy', dict_val)
-    #
-    # dict_train = np.load('dict_train.npy')[()]
-    # train(epochs=Config.epoch, dict_train=dict_train)
-    # #
-    dict_test = np.load('dict_test.npy')[()]
+    xml_dir = '../VOCdevkit2007/VOC2007/Annotations'
+    img_dir = '../VOCdevkit2007/VOC2007/JPEGImages'
+    img_box_dict = voc_generate_img_box_dict(xml_dir, img_dir)
+    dict_train, dict_val = generate_train_val_data(img_box_dict)
+    train(1, dict_train, dict_val)
+
+    xml_dir = '../VOCtest2007/VOC2007/Annotations'
+    img_dir = '../VOCtest2007/VOC2007/JPEGImages'
+    test_dict = voc_generate_img_box_dict(xml_dir, img_dir)
     faster_rcnn = FasterRCNNVGG16().cuda()
     state_dict = torch.load('faster_rcnn_model.pt')
     faster_rcnn.load_state_dict(state_dict['model'])
-    mAP = evaluation(dict_test, faster_rcnn, test_num=100)
+    mAP = evaluation(test_dict, faster_rcnn)
     print(mAP)

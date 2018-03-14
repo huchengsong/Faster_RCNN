@@ -2,12 +2,8 @@ import xml.etree.ElementTree as ET
 import os 
 import numpy as np
 
-XML_DIR = '../VOCdevkit/VOC2012/Annotations'
-IMG_DIR = '../VOCdevkit/VOC2012/JPEGImages'
-SAVE_DIR = '../VOCdevkit/img_box_dict.npy'
 
-
-def voc2012_generate_img_box_dict(xml_dir, img_dir):
+def voc_generate_img_box_dict(xml_dir, img_dir):
     """
     :param xml_dir: xml file directory
     :param img_dir: image file directory
@@ -43,5 +39,8 @@ def voc2012_generate_img_box_dict(xml_dir, img_dir):
 
 
 if __name__ == '__main__':
-    img_box_dict = voc2012_generate_img_box_dict(XML_DIR, IMG_DIR)
+    XML_DIR = '../VOCdevkit/VOC2012/Annotations'
+    IMG_DIR = '../VOCdevkit/VOC2012/JPEGImages'
+    SAVE_DIR = '../VOCdevkit/img_box_dict.npy'
+    img_box_dict = voc_generate_img_box_dict(XML_DIR, IMG_DIR)
     np.save(SAVE_DIR, img_box_dict)
