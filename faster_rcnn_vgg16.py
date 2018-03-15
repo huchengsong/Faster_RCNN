@@ -148,7 +148,7 @@ class VGG16ROIHead(nn.Module):
         self.classifier = classifier
         self.cls_loc = nn.Linear(4096, num_class * 4)
         self.score = nn.Linear(4096, num_class)
-        initialize_params(self.cls_loc, 0, 0.01)
+        initialize_params(self.cls_loc, 0, 0.001)
         initialize_params(self.score, 0, 0.01)
 
         self.num_class = num_class

@@ -53,7 +53,6 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
     :param test_num: the number of images to be tested
     :return: mean average precision
     """
-
     bboxes, labels, scores = list(), list(), list()
     gt_bboxes, gt_labels = list(), list()
     for i, [img_dir, img_info] in tqdm(enumerate(eval_dict.items())):
@@ -61,9 +60,7 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
             continue
         img, img_info = rescale_image(img_dir, img_info)
         img_tensor = create_img_tensor(img)
-        box, score, label = faster_rcnn.predict(img_tensor,
-                                                score_thresh=Config.eval_score_thresh,
-                                                iou_thresh=Config.eval_iou_thresh)
+        box, score, label = faster_rcnn.predict(img_tensor)
 
         gt_bbox = np.array(img_info['objects'])[:, 1:5].astype(np.float32)
         gt_label = np.array(img_info['objects'])[:, 0]
@@ -132,7 +129,6 @@ def train(epochs, dict_train, dict_val, pretrained_model=Config.load_path):
         if map > max_map:
             max_map = map
             trainer.save('faster_rcnn_model.pt')
-            print('new model saved')
 
         # lr decay
         if epoch == 7:
@@ -144,7 +140,7 @@ if __name__ == '__main__':
     img_dir = '../VOCdevkit2007/VOC2007/JPEGImages'
     img_box_dict = voc_generate_img_box_dict(xml_dir, img_dir)
     dict_train, dict_val = generate_train_val_data(img_box_dict)
-    train(10, dict_train, dict_val)
+    train(14, dict_train, dict_val)
 
     xml_dir = '../VOCtest2007/VOC2007/Annotations'
     img_dir = '../VOCtest2007/VOC2007/JPEGImages'

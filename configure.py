@@ -57,8 +57,6 @@ class Config:
 
     # evaluation
     eval_num = float("inf")
-    eval_score_thresh = 0.7
-    eval_iou_thresh = 0.3
 
     # use dropout in RoIHead
     use_drop = False
