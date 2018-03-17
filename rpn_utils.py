@@ -58,7 +58,7 @@ def generate_training_anchors(roi, gt_bbox, gt_label, num_sample=Config.roi_num_
     return sampled_roi, gt_roi_loc, gt_roi_label
 
 
-def generate_anchor_loc_label(anchor, gt_bbox, img_size,
+def generate_anchor_loc_label(anchor, gt_bbox, img_size, loc_mean, loc_std,
                               num_sample=Config.rpn_num_sample, pos_iou_thresh=Config.rpn_pos_iou_thresh,
                               neg_iou_thresh=Config.rpn_neg_iou_thresh, pos_ratio=Config.rpn_pos_ratio):
     """
@@ -66,6 +66,8 @@ def generate_anchor_loc_label(anchor, gt_bbox, img_size,
     :param anchor: (N, 4) pytorch tensor
     :param gt_bbox: (K, 4) ndrray
     :param img_size: image size [H, W]
+    :param loc_mean: (4, ) list
+    :param loc_std: (4, ) list
     :param num_sample: number of output samples
     :param pos_iou_thresh: threshold for positive anchors
     :param neg_iou_thresh: threshold for negative anchors
@@ -122,6 +124,12 @@ def generate_anchor_loc_label(anchor, gt_bbox, img_size,
     anchor_labels = _unmap(labels, num_anchors, ind_inside_img, fill=-1)
     anchor_gt_parameterized = _unmap(gt_box_parameterized, num_anchors, ind_inside_img, fill=0)
 
+    # normalize
+    loc_mean = torch.cuda.FloatTensor(loc_mean)
+    loc_std = torch.cuda.FloatTensor(loc_std)
+
+    anchor_gt_parameterized = (anchor_gt_parameterized - loc_mean) / loc_std
+
     return anchor_labels, anchor_gt_parameterized
 
 
@@ -165,7 +173,7 @@ def rpn_loss(rpn_score, rpn_loc, gt_rpn_loc, gt_rpn_label, rpn_sigma):
     loc_loss = _smooth_l1_loss(rpn_loc, gt_rpn_loc, mask, rpn_sigma)
 
     # normalize by the number of positive and negative rois
-    loc_loss = Config.lambda_rpn_loc * loc_loss / (gt_rpn_label >= 0).float().sum()
+    loc_loss = loc_loss / (gt_rpn_label >= 0).float().sum()
 
     # rpn cls loss
     # nn.CrossEntropy includes LogSoftMax and NLLLoss in one single function

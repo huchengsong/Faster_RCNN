@@ -17,6 +17,9 @@ class FasterRCNNTrainer(nn.Module):
         self.roi_sigma = roi_sigma
         self.optimizer = self.faster_rcnn.optimizer
 
+        self.loc_normalize_mean = Config.loc_normalize_mean
+        self.loc_normalize_std = Config.loc_normalize_std
+
     def forward(self, img_tensor, img_info):
         img_size = img_info['img_size']
         features = self.faster_rcnn.extractor(img_tensor)
@@ -27,13 +30,15 @@ class FasterRCNNTrainer(nn.Module):
 
         # RPN loss
         rpn_locs, rpn_scores, rois, anchors = self.faster_rcnn.rpn(features, img_size)
-        gt_rpn_label, gt_rpn_loc = generate_anchor_loc_label(anchors, gt_bbox, img_size)
+        gt_rpn_label, gt_rpn_loc = generate_anchor_loc_label(anchors, gt_bbox, img_size,
+                                                             self.loc_normalize_mean,
+                                                             self.loc_normalize_std)
         rpn_cls_loss, rpn_loc_loss = rpn_loss(rpn_scores, rpn_locs,
                                               gt_rpn_loc, gt_rpn_label,
                                               self.rpn_sigma)
 
-        # print('rpn_cls_loss', rpn_cls_loss.data.cpu().numpy(),
-        #       'rpn_loc_loss', rpn_loc_loss.data.cpu().numpy())
+        print('rpn_cls_loss', rpn_cls_loss.data.cpu().numpy(),
+              'rpn_loc_loss', rpn_loc_loss.data.cpu().numpy())
 
         # generate proposals from rpn rois
         sampled_roi, gt_roi_loc, gt_roi_label = generate_training_anchors(rois, gt_bbox, gt_label)
@@ -44,8 +49,8 @@ class FasterRCNNTrainer(nn.Module):
                                                     gt_roi_loc, gt_roi_label,
                                                     self.roi_sigma)
 
-        # print('roi_cls_loss', roi_cls_loss.data.cpu().numpy(),
-        #       'roi_loc_loss', roi_loc_loss.data.cpu().numpy())
+        print('roi_cls_loss', roi_cls_loss.data.cpu().numpy(),
+              'roi_loc_loss', roi_loc_loss.data.cpu().numpy())
 
         return rpn_cls_loss + rpn_loc_loss + roi_cls_loss + roi_loc_loss
 

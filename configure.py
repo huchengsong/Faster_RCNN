@@ -23,7 +23,11 @@ class Config:
     # param for optimizer
     weight_decay = 0.0005
     lr_decay = 0.1
-    lr = 1e-3
+    lr = 0.001
+
+    # loc mean and std
+    loc_normalize_mean = [0., 0., 0., 0.]
+    loc_normalize_std = [0.1, 0.1, 0.2, 0.2]
 
     # param for creating rpn proposals
     nms_thresh = 0.7

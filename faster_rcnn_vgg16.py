@@ -49,9 +49,14 @@ def create_rpn_proposals(locs, scores, anchors, img_size):
     num_pre_nms = Config.num_pre_nms
     num_post_nms = Config.num_post_nms
     min_size = Config.min_size
+    loc_mean = torch.cuda.FloatTensor(Config.loc_normalize_mean)
+    loc_std = torch.cuda.FloatTensor(Config.loc_normalize_std)
     img_h = img_size[0]
     img_w = img_size[1]
 
+    # loc de-normalize
+    locs = locs * loc_std + loc_mean
+    # loc de-parameterize
     rois = box_deparameterize_gpu(locs, anchors)
 
     # take top num_pre_nms rois and scores

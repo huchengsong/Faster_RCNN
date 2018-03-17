@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-from configure import Config
-
 
 def fast_rcnn_loss(roi_score, roi_cls_loc, gt_roi_loc, gt_roi_label, roi_sigma):
     """
@@ -26,7 +24,7 @@ def fast_rcnn_loss(roi_score, roi_cls_loc, gt_roi_loc, gt_roi_label, roi_sigma):
     pos_mask = Variable(torch.cuda.FloatTensor(num_roi, 4).fill_(0))
     pos_mask[(gt_roi_label > 0).view(-1, 1).expand_as(pos_mask)] = 1
     loc_loss = _smooth_l1_loss(roi_loc, gt_roi_loc, pos_mask, roi_sigma)
-    loc_loss = Config.lambda_roi_loc * loc_loss/(gt_roi_label >= 0).sum().float()
+    loc_loss = loc_loss/(gt_roi_label >= 0).sum().float()
 
     # class loss
     cls_loss = nn.CrossEntropyLoss()(roi_score, gt_roi_label)
