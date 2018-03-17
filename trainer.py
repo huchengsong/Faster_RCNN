@@ -30,9 +30,7 @@ class FasterRCNNTrainer(nn.Module):
 
         # RPN loss
         rpn_locs, rpn_scores, rois, anchors = self.faster_rcnn.rpn(features, img_size)
-        gt_rpn_label, gt_rpn_loc = generate_anchor_loc_label(anchors, gt_bbox, img_size,
-                                                             self.loc_normalize_mean,
-                                                             self.loc_normalize_std)
+        gt_rpn_label, gt_rpn_loc = generate_anchor_loc_label(anchors, gt_bbox, img_size)
         rpn_cls_loss, rpn_loc_loss = rpn_loss(rpn_scores, rpn_locs,
                                               gt_rpn_loc, gt_rpn_label,
                                               self.rpn_sigma)

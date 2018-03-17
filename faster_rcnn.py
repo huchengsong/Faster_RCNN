@@ -46,6 +46,8 @@ class FasterRCNN(nn.Module):
         train_iou_thresh = Config.iou_thresh
         train_num_pre_nms = Config.num_pre_nms
         train_num_post_nms = Config.num_post_nms
+        loc_mean = Config.loc_normalize_mean
+        loc_std = Config.loc_normalize_std
 
         # set parameters for evaluation
         Config.score_thresh = 0.05
@@ -58,6 +60,11 @@ class FasterRCNN(nn.Module):
         roi_cls_loc, roi_scores, rois = self(img_tensor)
         roi_scores = nn.Softmax(dim=1)(roi_scores).data
         roi_cls_loc = roi_cls_loc.view(-1, 4).data
+
+        # de-normalize
+        loc_mean = torch.cuda.FloatTensor(loc_mean)
+        loc_std = torch.cuda.FloatTensor(loc_std)
+        roi_cls_loc = roi_cls_loc * loc_std + loc_mean
 
         rois = rois.view(-1, 1, 4).repeat(1, self.num_class, 1).view(-1, 4)
         cls_bbox = box_deparameterize_gpu(roi_cls_loc, rois)

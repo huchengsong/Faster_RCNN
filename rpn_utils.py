@@ -11,7 +11,9 @@ from configure import Config
 def generate_training_anchors(roi, gt_bbox, gt_label, num_sample=Config.roi_num_sample,
                               pos_ratio=Config.roi_pos_ratio, pos_iou_thresh=Config.roi_pos_iou_thresh,
                               neg_iou_thresh_hi=Config.roi_neg_iou_thresh_hi,
-                              neg_iou_thresh_lo=Config.roi_neg_iou_thresh_lo):
+                              neg_iou_thresh_lo=Config.roi_neg_iou_thresh_lo,
+                              loc_mean =  Config.loc_normalize_mean,
+                              loc_std = Config.loc_normalize_std):
     """
     generate ground truth label and location for sampled proposals
     :param roi: (N, 4) pytorch tensor; region of interest from rpn proposal
@@ -22,6 +24,8 @@ def generate_training_anchors(roi, gt_bbox, gt_label, num_sample=Config.roi_num_
     :param pos_iou_thresh: positive iou threshold
     :param neg_iou_thresh_hi: negative iou threshold low end
     :param neg_iou_thresh_lo: negative iou threshold high end
+    :param loc_mean: list (4, )
+    :param loc_std: list (4, )
     :return: pytorch tensor: sampled_roi, gt_loc, gt_label
     """
     gt_bbox = torch.from_numpy(gt_bbox).cuda()
@@ -55,10 +59,15 @@ def generate_training_anchors(roi, gt_bbox, gt_label, num_sample=Config.roi_num_
     # get parameterized roi
     gt_roi_loc = box_parameterize_gpu(gt_bbox[roi_gt_assignment[keep_index]], sampled_roi)
 
+    # normalize
+    loc_mean = torch.cuda.FloatTensor(loc_mean)
+    loc_std = torch.cuda.FloatTensor(loc_std)
+    gt_roi_loc = (gt_roi_loc - loc_mean) / loc_std
+
     return sampled_roi, gt_roi_loc, gt_roi_label
 
 
-def generate_anchor_loc_label(anchor, gt_bbox, img_size, loc_mean, loc_std,
+def generate_anchor_loc_label(anchor, gt_bbox, img_size,
                               num_sample=Config.rpn_num_sample, pos_iou_thresh=Config.rpn_pos_iou_thresh,
                               neg_iou_thresh=Config.rpn_neg_iou_thresh, pos_ratio=Config.rpn_pos_ratio):
     """
@@ -66,8 +75,6 @@ def generate_anchor_loc_label(anchor, gt_bbox, img_size, loc_mean, loc_std,
     :param anchor: (N, 4) pytorch tensor
     :param gt_bbox: (K, 4) ndrray
     :param img_size: image size [H, W]
-    :param loc_mean: (4, ) list
-    :param loc_std: (4, ) list
     :param num_sample: number of output samples
     :param pos_iou_thresh: threshold for positive anchors
     :param neg_iou_thresh: threshold for negative anchors
@@ -123,12 +130,6 @@ def generate_anchor_loc_label(anchor, gt_bbox, img_size, loc_mean, loc_std,
 
     anchor_labels = _unmap(labels, num_anchors, ind_inside_img, fill=-1)
     anchor_gt_parameterized = _unmap(gt_box_parameterized, num_anchors, ind_inside_img, fill=0)
-
-    # normalize
-    loc_mean = torch.cuda.FloatTensor(loc_mean)
-    loc_std = torch.cuda.FloatTensor(loc_std)
-
-    anchor_gt_parameterized = (anchor_gt_parameterized - loc_mean) / loc_std
 
     return anchor_labels, anchor_gt_parameterized
 
