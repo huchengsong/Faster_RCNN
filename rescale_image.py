@@ -5,11 +5,12 @@ import random
 from configure import Config
 
 
-def rescale_image(img_dir, img_info):
+def rescale_image(img_dir, img_info, flip=True):
     """
     rescale image such that the shorter side is s = 600 pixels
     :param img_dir: directory of a image
     :param img_info: img info of the image
+    :param flip: whether flip the image
     :return: rescaled_image
     :return: modified_img_info: modified image info
     """
@@ -44,7 +45,8 @@ def rescale_image(img_dir, img_info):
         object[1:5] = (np.array(object[1:5]) * scale_ratio).tolist()
 
     # randomly flip x axis
-    rescaled_img, img_info = img_flip(rescaled_img, img_info,
+    if flip:
+        rescaled_img, img_info = img_flip(rescaled_img, img_info,
                                       x_flip=random.choice([True, False]),
                                       y_flip=False)
 

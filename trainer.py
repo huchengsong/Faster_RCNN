@@ -35,8 +35,8 @@ class FasterRCNNTrainer(nn.Module):
                                               gt_rpn_loc, gt_rpn_label,
                                               self.rpn_sigma)
 
-        # print('rpn_cls_loss', rpn_cls_loss.data.cpu().numpy(),
-        #       'rpn_loc_loss', rpn_loc_loss.data.cpu().numpy())
+        print('rpn_cls_loss', rpn_cls_loss.data.cpu().numpy(),
+              'rpn_loc_loss', rpn_loc_loss.data.cpu().numpy())
 
         # generate proposals from rpn rois
         sampled_roi, gt_roi_loc, gt_roi_label = generate_training_anchors(rois, gt_bbox, gt_label)
@@ -47,8 +47,8 @@ class FasterRCNNTrainer(nn.Module):
                                                     gt_roi_loc, gt_roi_label,
                                                     self.roi_sigma)
 
-        # print('roi_cls_loss', roi_cls_loss.data.cpu().numpy(),
-        #       'roi_loc_loss', roi_loc_loss.data.cpu().numpy())
+        print('roi_cls_loss', roi_cls_loss.data.cpu().numpy(),
+              'roi_loc_loss', roi_loc_loss.data.cpu().numpy())
 
         return rpn_cls_loss + rpn_loc_loss + roi_cls_loss + roi_loc_loss
 
