@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import random
 
 from configure import Config
 
@@ -42,7 +43,31 @@ def rescale_image(img_dir, img_info):
     for object in img_info['objects']:
         object[1:5] = (np.array(object[1:5]) * scale_ratio).tolist()
 
+    # randomly flip x axis
+    rescaled_img, img_info = img_flip(rescaled_img, img_info,
+                                      x_flip=random.choice([True, False]),
+                                      y_flip=False)
+
     return rescaled_img, img_info
+
+
+def img_flip(img, img_info, x_flip=False, y_flip=False):
+    bbox = np.array(img_info['objects'])[:, 1:5].astype(np.float32)
+    if x_flip:
+        img = cv2.flip(img, 1)
+        xmax = img_info['img_size'][1] - bbox[:, 1]
+        xmin = img_info['img_size'][1] - bbox[:, 3]
+        bbox[:, 1] = xmin
+        bbox[:, 3] = xmax
+    if y_flip:
+        img = cv2.flip(img, 0)
+        ymax = img_info['img_size'][0] - bbox[:, 0]
+        ymin = img_info['img_size'][0] - bbox[:, 2]
+        bbox[:, 0] = ymin
+        bbox[:, 2] = ymax
+    for i in range(len(img_info['objects'])):
+        img_info['objects'][i][1:5] = bbox[i].tolist()
+    return img, img_info
 
 
 if __name__ == '__main__':

@@ -42,16 +42,15 @@ class FasterRCNN(nn.Module):
         self.eval()
 
         # store training parameters
-        train_score_thresh = Config.score_thresh
-        train_iou_thresh = Config.iou_thresh
         train_num_pre_nms = Config.num_pre_nms
         train_num_post_nms = Config.num_post_nms
+
+        score_thresh = Config.score_thresh
+        iou_thresh = Config.iou_thresh
         loc_mean = Config.loc_normalize_mean
         loc_std = Config.loc_normalize_std
 
         # set parameters for evaluation
-        Config.score_thresh = 0.05
-        Config.iou_thresh = 0.3
         Config.num_pre_nms = 6000
         Config.num_post_nms = 300
 
@@ -75,12 +74,10 @@ class FasterRCNN(nn.Module):
         cls_bbox = cls_bbox.view(-1, self.num_class * 4)
 
         box, score, label = non_maximum_suppression_roi(roi_scores, cls_bbox, range(1, Config.num_class),
-                                                        score_thresh=Config.score_thresh, iou_thresh=Config.iou_thresh)
+                                                        score_thresh=score_thresh, iou_thresh=iou_thresh)
         self.train()
 
         # restore parameter for training
-        Config.score_thresh = train_score_thresh
-        Config.iou_thresh = train_iou_thresh
         Config.num_pre_nms = train_num_pre_nms
         Config.num_post_nms = train_num_post_nms
 

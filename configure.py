@@ -48,15 +48,11 @@ class Config:
     rpn_neg_iou_thresh = 0.3
     rpn_pos_ratio = 0.5
 
-    # regression loss lambda
-    lambda_rpn_loc = 5
-    lambda_roi_loc = 5
-
     # training
     epoch = 10
 
     # predict param
-    score_thresh = 0.7
+    score_thresh = 0.05
     iou_thresh = 0.3
 
     # evaluation

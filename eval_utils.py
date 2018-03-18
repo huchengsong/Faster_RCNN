@@ -6,7 +6,7 @@ from bbox_IoU import bbox_IoU
 from configure import Config
 
 
-def calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, iou_thresh=0.5):
+def calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, iou_thresh=0.5, use_07_metric=False):
     """
     Calculate average precisions
     :param bboxes: list of N ndarray (K, 4)
@@ -15,11 +15,12 @@ def calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, iou_thresh=0.5):
     :param gt_bboxes: list of N ndarray (J, 4)
     :param gt_labels: list of N ndarray (J, )
     :param iou_thresh: threshold
+    :param use_07_metric: whether use VOC2007 metric
     :return:
     """
 
     prec, rec = calc_precision_recall(bboxes, labels, scores, gt_bboxes, gt_labels, iou_thresh)
-    ap = calc_ap(prec, rec)
+    ap = calc_ap(prec, rec, use_07_metric)
     return ap, np.nanmean(ap)
 
 
@@ -120,18 +121,29 @@ def calc_precision_recall(bboxes, labels, scores, gt_bboxes,
     return prec, rec
 
 
-def calc_ap(prec, rec):
+def calc_ap(prec, rec, use_07_metric):
     num_classes = len(prec)
     ap = np.empty(num_classes)
     for i in range(num_classes):
         if prec[i] is None or rec[i] is None:
             ap[i] = np.nan
             continue
-        mean_prec = np.concatenate(([[0], prec[i], [0]]))
-        mean_rec = np.concatenate(([[0], rec[i], [1]]))
-        mean_prec = np.maximum.accumulate(mean_prec[::-1])[::-1]
-        index = np.where(mean_rec[1:] != mean_rec[:-1])[0]
-        ap[i] = np.sum((mean_rec[index + 1] - mean_rec[index]) * mean_prec[index + 1])
+
+        if use_07_metric:
+            # 11 point metric
+            ap[i] = 0
+            for t in np.arange(0., 1.1, 0.1):
+                if np.sum(rec[i] >= t) == 0:
+                    p = 0
+                else:
+                    p = np.max(np.nan_to_num(prec[i])[rec[i] >= t])
+                ap[i] += p / 11
+        else:
+            mean_prec = np.concatenate(([[0], prec[i], [0]]))
+            mean_rec = np.concatenate(([[0], rec[i], [1]]))
+            mean_prec = np.maximum.accumulate(mean_prec[::-1])[::-1]
+            index = np.where(mean_rec[1:] != mean_rec[:-1])[0]
+            ap[i] = np.sum((mean_rec[index + 1] - mean_rec[index]) * mean_prec[index + 1])
     return ap
 
 

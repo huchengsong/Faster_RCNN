@@ -101,21 +101,25 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
         # ########### test code ##################
         # ########################################
         """
-    _, mAP = calc_map(bboxes, labels, scores, gt_bboxes, gt_labels)
+    AP, mAP = calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, use_07_metric=True)
     return mAP
 
 
-def train(epochs, dict_train, dict_val, pretrained_model=Config.load_path):
-
+def train(epochs, img_box_dict, pretrained_model=Config.load_path):
     faster_rcnn = FasterRCNNVGG16().cuda()
     faster_rcnn.get_optimizer(Config.lr)
     print('model constructed')
     trainer = FasterRCNNTrainer(faster_rcnn).cuda()
     if pretrained_model:
         trainer.load(pretrained_model)
+
     max_map = 0
     for epoch in range(epochs):
         print('epoch: ', epoch)
+
+        # randomly divide data into training and validation subset for each epoch
+        dict_train, dict_val = generate_train_val_data(img_box_dict)
+
         for i, [img_dir, img_info] in tqdm(enumerate(dict_train.items())):
             if len(img_info['objects']) == 0:
                 continue
@@ -139,8 +143,7 @@ if __name__ == '__main__':
     xml_dir = '../VOCdevkit2007/VOC2007/Annotations'
     img_dir = '../VOCdevkit2007/VOC2007/JPEGImages'
     img_box_dict = voc_generate_img_box_dict(xml_dir, img_dir)
-    dict_train, dict_val = generate_train_val_data(img_box_dict)
-    train(14, dict_train, dict_val)
+    train(14, img_box_dict)
 
     xml_dir = '../VOCtest2007/VOC2007/Annotations'
     img_dir = '../VOCtest2007/VOC2007/JPEGImages'
