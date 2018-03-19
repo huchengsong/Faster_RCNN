@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import random
+from copy import deepcopy
 
 from configure import Config
 
@@ -14,6 +15,7 @@ def rescale_image(img_dir, img_info, flip=True):
     :return: rescaled_image
     :return: modified_img_info: modified image info
     """
+    img_info = deepcopy(img_info)
     min_size = Config.img_min_size
     max_size = Config.img_max_size
     image = cv2.imread(img_dir)
@@ -83,8 +85,8 @@ if __name__ == '__main__':
         print(img_info)
         image, image_info = rescale_image(img_dir, img_info, flip=True)
         print(img_info)
-        print(image.shape)
-        for object in img_info['objects']:
+        print(image_info)
+        for object in image_info['objects']:
             ymin, xmin, ymax, xmax = [int(i) for i in object[1:5]]
             cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
             cv2.putText(image,

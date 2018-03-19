@@ -134,7 +134,7 @@ def train(epochs, img_box_dict, pretrained_model=Config.load_path):
             trainer.save('faster_rcnn_model.pt')
 
         # lr decay
-        if epoch == 0 or epoch == 5:
+        if epoch == 9:
             trainer.faster_rcnn.scale_lr(Config.lr_decay)
 
 
