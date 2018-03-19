@@ -73,10 +73,15 @@ def img_flip(img, img_info, x_flip=False, y_flip=False):
 
 
 if __name__ == '__main__':
-    img_box_dict = np.load('../VOCdevkit/img_box_dict.npy')[()]
-    for img_dir, img_info in img_box_dict.items():
+    from train import voc_generate_img_box_dict
+    from train import generate_train_val_data
+    xml_dir = '../VOCdevkit2007/VOC2007/Annotations'
+    img_dir = '../VOCdevkit2007/VOC2007/JPEGImages'
+    img_box_dict = voc_generate_img_box_dict(xml_dir, img_dir)
+    dict_train, dict_val = generate_train_val_data(img_box_dict)
+    for img_dir, img_info in dict_train.items():
         print(img_info)
-        image, image_info = rescale_image(img_dir, img_info)
+        image, image_info = rescale_image(img_dir, img_info, flip=True)
         print(img_info)
         print(image.shape)
         for object in img_info['objects']:
