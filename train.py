@@ -122,7 +122,7 @@ def train(epochs, img_box_dict, pretrained_model=Config.load_path):
         for i, [img_dir, img_info] in tqdm(enumerate(dict_train.items())):
             if len(img_info['objects']) == 0:
                 continue
-            img, img_info = rescale_image(img_dir, img_info, flip=False)
+            img, img_info = rescale_image(img_dir, img_info, flip=True)
             img_tensor = create_img_tensor(img)
             trainer.train_step(img_tensor, img_info)
 
@@ -134,7 +134,7 @@ def train(epochs, img_box_dict, pretrained_model=Config.load_path):
             trainer.save('faster_rcnn_model.pt')
 
         # lr decay
-        if epoch == 9:
+        if epoch == 2 or epoch == 9:
             trainer.faster_rcnn.scale_lr(Config.lr_decay)
 
 

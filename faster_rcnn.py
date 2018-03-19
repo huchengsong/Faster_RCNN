@@ -96,3 +96,4 @@ class FasterRCNN(nn.Module):
     def scale_lr(self, decay):
         for param_group in self.optimizer.param_groups:
             param_group['lr'] *= decay
+        print('learning rate changed; decay = ', decay)
