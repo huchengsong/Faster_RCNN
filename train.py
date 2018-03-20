@@ -54,7 +54,7 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
     :return: mean average precision
     """
     bboxes, labels, scores = list(), list(), list()
-    gt_bboxes, gt_labels = list(), list()
+    gt_bboxes, gt_labels, gt_difficult = list(), list(), list()
     for i, [img_dir, img_info] in tqdm(enumerate(eval_dict.items())):
         if len(img_info['objects']) == 0:
             continue
@@ -64,12 +64,22 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
 
         gt_bbox = np.array(img_info['objects'])[:, 1:5].astype(np.float32)
         gt_label = np.array(img_info['objects'])[:, 0]
+
+        # # not using difficult bboxes
+        # difficult = np.array(img_info['difficult'])
+        # gt_bbox = gt_bbox[difficult == True]
+        # gt_label = gt_label[difficult == True]
+        difficult = np.array(img_info['difficult'])
+
+        # label from text to number
         gt_label = text_to_num(gt_label)
+
         bboxes.append(box)
         labels.append(label)
         scores.append(score)
         gt_bboxes.append(gt_bbox)
         gt_labels.append(gt_label)
+        gt_difficult.append(difficult)
         if i == test_num:
             break
 
@@ -90,7 +100,7 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
             ymin, xmin, ymax, xmax = [int(j) for j in b]
             cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
             cv2.putText(img,
-                        key[gt_label[i]],
+                        key[gt_label[i]] + str(difficult[i]),
                         (xmin, ymin),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (0, 255, 0))
@@ -101,7 +111,7 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
         # ########### test code ##################
         # ########################################
         """
-    AP, mAP = calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, use_07_metric=True)
+    AP, mAP = calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, gt_difficult, use_07_metric=True)
     return mAP
 
 
@@ -139,10 +149,10 @@ def train(epochs, img_box_dict, pretrained_model=Config.load_path):
 
 
 if __name__ == '__main__':
-    xml_dir = '../VOCdevkit2007/VOC2007/Annotations'
-    img_dir = '../VOCdevkit2007/VOC2007/JPEGImages'
-    img_box_dict = voc_generate_img_box_dict(xml_dir, img_dir)
-    train(14, img_box_dict)
+    # xml_dir = '../VOCdevkit2007/VOC2007/Annotations'
+    # img_dir = '../VOCdevkit2007/VOC2007/JPEGImages'
+    # img_box_dict = voc_generate_img_box_dict(xml_dir, img_dir)
+    # train(14, img_box_dict)
 
     xml_dir = '../VOCtest2007/VOC2007/Annotations'
     img_dir = '../VOCtest2007/VOC2007/JPEGImages'

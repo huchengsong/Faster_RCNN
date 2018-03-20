@@ -1,12 +1,11 @@
 from collections import defaultdict
 import numpy as np
-from numba import jit
 
 from bbox_IoU import bbox_IoU
 from configure import Config
 
 
-def calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, iou_thresh=0.5, use_07_metric=False):
+def calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, gt_difficult, iou_thresh=0.5, use_07_metric=False):
     """
     Calculate average precisions
     :param bboxes: list of N ndarray (K, 4)
@@ -14,19 +13,19 @@ def calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, iou_thresh=0.5, use_0
     :param scores: list of N ndarray (K, )
     :param gt_bboxes: list of N ndarray (J, 4)
     :param gt_labels: list of N ndarray (J, )
+    :param gt_difficult: list of N ndarray (J, )
     :param iou_thresh: threshold
     :param use_07_metric: whether use VOC2007 metric
     :return:
     """
 
-    prec, rec = calc_precision_recall(bboxes, labels, scores, gt_bboxes, gt_labels, iou_thresh)
+    prec, rec = calc_precision_recall(bboxes, labels, scores, gt_bboxes, gt_labels, gt_difficult, iou_thresh)
     ap = calc_ap(prec, rec, use_07_metric)
     return ap, np.nanmean(ap)
 
 
-@jit
 def calc_precision_recall(bboxes, labels, scores, gt_bboxes,
-                          gt_labels, iou_thresh=0.5,
+                          gt_labels, gt_difficult, iou_thresh=0.5,
                           num_class=Config.num_class):
     """
     return precision and recall for each class. N: number of images
@@ -35,6 +34,7 @@ def calc_precision_recall(bboxes, labels, scores, gt_bboxes,
     :param scores: list of N  (K, ) ndarray
     :param gt_bboxes: list of N (J, 4) ndarray
     :param gt_labels: list of N (J, ) ndarray
+    :param gt_difficult: list of N ndarray (J, )
     :param iou_thresh: threshold
     :param num_class: classes
     :return: prec, rec: list (num_class, ), with cumulative recall and precision for each class
@@ -51,6 +51,11 @@ def calc_precision_recall(bboxes, labels, scores, gt_bboxes,
         gt_boxes_i = gt_bboxes[i]
         gt_labels_i = gt_labels[i]
 
+        if gt_difficult is None:
+            gt_difficult_i = np.zeros(len(gt_labels_i), dtype=bool)
+        else:
+            gt_difficult_i = gt_difficult[i]
+
         # go through each class id in prediction and gt labels
         for l in np.unique(np.concatenate((gt_labels_i, labels_i))):
             pred_l = labels_i == l
@@ -65,9 +70,10 @@ def calc_precision_recall(bboxes, labels, scores, gt_bboxes,
             # selected ground truth bounding box for class l
             gt_l = gt_labels_i == l
             gt_box_l = gt_boxes_i[gt_l]
+            gt_difficult_l = gt_difficult_i[gt_l]
 
             # add the number of gt bbox for class l
-            n_pos[l] += (len(gt_box_l))
+            n_pos[l] += np.sum(gt_difficult_l == 0)
 
             # there is no prediction box for class l
             if len(pred_box_l) == 0:
@@ -89,14 +95,17 @@ def calc_precision_recall(bboxes, labels, scores, gt_bboxes,
             select = np.zeros(len(gt_box_l), dtype=np.bool)
             for gt_idx in gt_index:
                 if gt_idx >= 0:
-                    if not select[gt_idx]:
-                        match[l].append(1)
+                    if gt_difficult_l[gt_idx]:
+                        match[l].append(-1)
                     else:
-                         match[l].append(0)
-                    # if two bounding box are predicted
-                    # for the same gt box, the second one
-                    # will be assigned as 0
-                    select[gt_idx] = True
+                        if not select[gt_idx]:
+                            match[l].append(1)
+                        else:
+                            match[l].append(0)
+                        # if two bounding box are predicted
+                        # for the same gt box, the second one
+                        # will be assigned as 0
+                        select[gt_idx] = True
                 else:
                     match[l].append(0)
 

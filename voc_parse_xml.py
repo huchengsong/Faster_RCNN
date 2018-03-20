@@ -25,16 +25,17 @@ def voc_generate_img_box_dict(xml_dir, img_dir):
             height = int(root.find('size').find('height').text)
             img_box_dict[img_path]['img_size'] = [height, width]
             img_box_dict[img_path]['objects'] = []
+            img_box_dict[img_path]['difficult'] = []
 
             for obj in root.iter('object'):
-                if obj.find('difficult').text == '0':
-                    name = obj.find('name').text
-                    bndbox = obj.find('bndbox')
-                    xmin = float(bndbox.find('xmin').text)
-                    ymin = float(bndbox.find('ymin').text)
-                    xmax = float(bndbox.find('xmax').text)
-                    ymax = float(bndbox.find('ymax').text)
-                    img_box_dict[img_path]['objects'].append([name, ymin, xmin, ymax, xmax])
+                img_box_dict[img_path]['difficult'].append(bool(int(obj.find('difficult').text)))
+                name = obj.find('name').text
+                bndbox = obj.find('bndbox')
+                xmin = float(bndbox.find('xmin').text)
+                ymin = float(bndbox.find('ymin').text)
+                xmax = float(bndbox.find('xmax').text)
+                ymax = float(bndbox.find('ymax').text)
+                img_box_dict[img_path]['objects'].append([name, ymin, xmin, ymax, xmax])
     return img_box_dict
 
 
