@@ -104,7 +104,7 @@ class RPN(nn.Module):
         self.anchor_base = generate_base_anchors(self.stride, self.ratios, self.scales)
         self.num_anchor_base = self.anchor_base.shape[0]
         self.all_anchors = anchor_proposals(64, 64, self.stride, self.anchor_base)
-        self.leaky_relu = nn.LeakyReLU(0.01)
+        self.relu = nn.ReLU()
         self.conv = nn.Conv2d(in_channel, out_channel, 3, stride=1, padding=1)
         self.score = nn.Conv2d(out_channel, self.num_anchor_base * 2, 1, stride=1, padding=0)
         self.loc = nn.Conv2d(out_channel, self.num_anchor_base * 4, 1, stride=1, padding=0)
@@ -129,15 +129,16 @@ class RPN(nn.Module):
         if n != 1:
             raise ValueError('Currently only batch size 1 is supported.')
         anchors = self.all_anchors[0:feature_h, 0:feature_w].contiguous().view(-1, 4)
-        x = self.leaky_relu(self.conv(x))
+        x = self.relu(self.conv(x))
 
         rpn_locs = self.loc(x)
         rpn_locs = rpn_locs.permute(0, 2, 3, 1).contiguous().view(-1, 4)
 
         rpn_scores = self.score(x)
         rpn_scores = rpn_scores.permute(0, 2, 3, 1).contiguous().view(-1, 2)
-        rpn_scores_after_softmax = self.softmax(rpn_scores)
-        rpn_fg_scores = rpn_scores_after_softmax[:, 1]
+        # rpn_scores_after_softmax = self.softmax(rpn_scores)
+        # rpn_fg_scores = rpn_scores_after_softmax[:, 1]
+        rpn_fg_scores = rpn_scores[:, 1]
         rois = create_rpn_proposals(rpn_locs.data, rpn_fg_scores.data, anchors, img_size)
 
         return rpn_locs, rpn_scores, rois, anchors

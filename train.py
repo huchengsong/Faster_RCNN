@@ -14,7 +14,7 @@ from configure import Config
 from voc_parse_xml import voc_generate_img_box_dict
 
 
-def generate_train_val_data(img_dict, p_train=0.9):
+def generate_train_val_data(img_dict, p_train=0.1):
     """
     retrun training, validation, test subsample
     :param img_dict: dictionary storing image directory and labeling
@@ -64,11 +64,6 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
 
         gt_bbox = np.array(img_info['objects'])[:, 1:5].astype(np.float32)
         gt_label = np.array(img_info['objects'])[:, 0]
-
-        # # not using difficult bboxes
-        # difficult = np.array(img_info['difficult'])
-        # gt_bbox = gt_bbox[difficult == True]
-        # gt_label = gt_label[difficult == True]
         difficult = np.array(img_info['difficult'])
 
         # label from text to number
@@ -112,6 +107,7 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
         # ########################################
         """
     AP, mAP = calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, gt_difficult, use_07_metric=True)
+
     return mAP
 
 
@@ -149,10 +145,10 @@ def train(epochs, img_box_dict, pretrained_model=Config.load_path):
 
 
 if __name__ == '__main__':
-    # xml_dir = '../VOCdevkit2007/VOC2007/Annotations'
-    # img_dir = '../VOCdevkit2007/VOC2007/JPEGImages'
-    # img_box_dict = voc_generate_img_box_dict(xml_dir, img_dir)
-    # train(14, img_box_dict)
+    xml_dir = '../VOCdevkit2007/VOC2007/Annotations'
+    img_dir = '../VOCdevkit2007/VOC2007/JPEGImages'
+    img_box_dict = voc_generate_img_box_dict(xml_dir, img_dir)
+    train(14, img_box_dict)
 
     xml_dir = '../VOCtest2007/VOC2007/Annotations'
     img_dir = '../VOCtest2007/VOC2007/JPEGImages'
