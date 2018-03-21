@@ -14,7 +14,7 @@ from configure import Config
 from voc_parse_xml import voc_generate_img_box_dict
 
 
-def generate_train_val_data(img_dict, p_train=0.95):
+def generate_train_val_data(img_dict, p_train=1.0):
     """
     retrun training, validation, test subsample
     :param img_dict: dictionary storing image directory and labeling
@@ -109,7 +109,7 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
     return mAP
 
 
-def train(epochs, img_box_dict, pretrained_model=Config.load_path):
+def train(epochs, img_box_dict, test_dict, pretrained_model=Config.load_path):
     faster_rcnn = FasterRCNNVGG16().cuda()
     faster_rcnn.get_optimizer(Config.lr)
     print('model constructed')
@@ -129,7 +129,7 @@ def train(epochs, img_box_dict, pretrained_model=Config.load_path):
             trainer.train_step(img_tensor, img_info)
 
         # save the model with better evaluation result
-        map = evaluation(dict_val, faster_rcnn, test_num=Config.eval_num)
+        map = evaluation(test_dict, faster_rcnn, 2000)
         print('mAP: ', map, 'max mAP: ', max_map)
         if map > max_map:
             max_map = map
@@ -141,14 +141,19 @@ def train(epochs, img_box_dict, pretrained_model=Config.load_path):
 
 
 if __name__ == '__main__':
+    # train data
     xml_dir = '../VOCdevkit2007/VOC2007/Annotations'
     img_dir = '../VOCdevkit2007/VOC2007/JPEGImages'
     img_box_dict = voc_generate_img_box_dict(xml_dir, img_dir)
-    train(14, img_box_dict)
 
+    # test data
     xml_dir = '../VOCtest2007/VOC2007/Annotations'
     img_dir = '../VOCtest2007/VOC2007/JPEGImages'
     test_dict = voc_generate_img_box_dict(xml_dir, img_dir)
+
+    train(14, img_box_dict, test_dict)
+
+
     faster_rcnn = FasterRCNNVGG16().cuda()
     state_dict = torch.load('faster_rcnn_model.pt')
     faster_rcnn.load_state_dict(state_dict['model'])
