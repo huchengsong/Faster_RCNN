@@ -14,7 +14,7 @@ from configure import Config
 from voc_parse_xml import voc_generate_img_box_dict
 
 
-def generate_train_val_data(img_dict, p_train=0.1):
+def generate_train_val_data(img_dict, p_train=0.95):
     """
     retrun training, validation, test subsample
     :param img_dict: dictionary storing image directory and labeling
@@ -56,8 +56,6 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
     bboxes, labels, scores = list(), list(), list()
     gt_bboxes, gt_labels, gt_difficult = list(), list(), list()
     for i, [img_dir, img_info] in tqdm(enumerate(eval_dict.items())):
-        if len(img_info['objects']) == 0:
-            continue
         img, img_info = rescale_image(img_dir, img_info, flip=False)
         img_tensor = create_img_tensor(img)
         box, score, label = faster_rcnn.predict(img_tensor)
@@ -126,8 +124,6 @@ def train(epochs, img_box_dict, pretrained_model=Config.load_path):
         dict_train, dict_val = generate_train_val_data(img_box_dict)
 
         for i, [img_dir, img_info] in tqdm(enumerate(dict_train.items())):
-            if len(img_info['objects']) == 0:
-                continue
             img, img_info = rescale_image(img_dir, img_info, flip=True)
             img_tensor = create_img_tensor(img)
             trainer.train_step(img_tensor, img_info)
