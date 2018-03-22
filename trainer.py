@@ -42,7 +42,7 @@ class FasterRCNNTrainer(nn.Module):
         sampled_roi, gt_roi_loc, gt_roi_label = generate_training_anchors(rois, gt_bbox, gt_label)
 
         # ROI loss
-        roi_cls_loc, roi_score = self.faster_rcnn.head(features, sampled_roi)
+        roi_cls_loc, roi_score = self.faster_rcnn.head(features, sampled_roi, img_size)
         roi_cls_loss, roi_loc_loss = fast_rcnn_loss(roi_score, roi_cls_loc,
                                                     gt_roi_loc, gt_roi_label,
                                                     self.roi_sigma)
@@ -62,10 +62,17 @@ class FasterRCNNTrainer(nn.Module):
     def save(self, save_path):
         save_dict = dict()
         save_dict['model'] = self.faster_rcnn.state_dict()
+        save_dict['optimizer'] = self.optimizer.state_dict()
         torch.save(save_dict, save_path)
         print('model saved as ' + save_path)
 
     def load(self, load_path):
         state_dict = torch.load(load_path)
         self.faster_rcnn.load_state_dict(state_dict['model'])
+        self.optimizer.load_state_dict(state_dict['optimizer'])
         print('model_loaded from ' + load_path)
+
+    def scale_lr(self, decay):
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] *= decay
+        print('learning rate changed; decay = ', decay)

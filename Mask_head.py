@@ -3,18 +3,18 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 
-def roi_align(features, rois, img_info, mask_in_size, sub_sample=2):
+def roi_align(features, rois, img_size, mask_in_size, sub_sample=2):
     """
     bilinear interpolition
     :param features: pytorch Variable (1, C, H, W)
     :param rois: pytorch tensor, (N, 4)
-    :param img_info: image information dictionary
+    :param img_size: [H, W]
     :param mask_in_size: size after ROI align
     :param mask_out_size: final mask size
     :return: (N, C, H_out, W_out)
     """
     feature_size = list(features.size())
-    img_size = torch.cuda.FloatTensor(img_info['img_size'])
+    img_size = torch.cuda.FloatTensor(img_size)
     feature_hw = torch.cuda.FloatTensor(feature_size[2:])
     rois_in_features = rois * feature_hw.repeat(2) / img_size.repeat(2)
     h_step = ((rois_in_features[:, 2] - rois_in_features[:, 0]) / (mask_in_size[0] * sub_sample))[:, None]
@@ -67,11 +67,10 @@ def test():
     img_tensor = Variable(torch.from_numpy(img).float().cuda()).permute(2, 0, 1)
     img_tensor.unsqueeze_(0)
     img_size = img.shape[:2]
-    img_info = {'img_size': img_size}
     mask_in_size = [14, 14]
 
     rois = torch.cuda.FloatTensor([[0, 0, 7, 7], [2, 2, 3, 3]])
-    result = roi_align(img_tensor, rois, img_info, mask_in_size, sub_sample=2)
+    result = roi_align(img_tensor, rois, img_size, mask_in_size, sub_sample=2)
 
     result1 = result.data.cpu()[0].permute(1, 2, 0).numpy().astype(np.uint8)
     result2 = result.data.cpu()[1].permute(1, 2, 0).numpy().astype(np.uint8)

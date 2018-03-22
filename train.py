@@ -129,7 +129,7 @@ def train(epochs, img_box_dict, test_dict, pretrained_model=Config.load_path):
             trainer.train_step(img_tensor, img_info)
 
         # save the model with better evaluation result
-        map = evaluation(test_dict, faster_rcnn, 2000)
+        map = evaluation(test_dict, faster_rcnn, 1000)
         print('mAP: ', map, 'max mAP: ', max_map)
         if map > max_map:
             max_map = map
@@ -138,8 +138,7 @@ def train(epochs, img_box_dict, test_dict, pretrained_model=Config.load_path):
         # load best and lr decay
         if epoch == 9:
             trainer.load('faster_rcnn_model.pt')
-            trainer.faster_rcnn.get_optimizer(Config.lr)
-            trainer.faster_rcnn.scale_lr(Config.lr_decay)
+            trainer.scale_lr(Config.lr_decay)
 
 
 if __name__ == '__main__':
@@ -154,7 +153,6 @@ if __name__ == '__main__':
     test_dict = voc_generate_img_box_dict(xml_dir, img_dir)
 
     train(14, img_box_dict, test_dict)
-
 
     faster_rcnn = FasterRCNNVGG16().cuda()
     state_dict = torch.load('faster_rcnn_model.pt')

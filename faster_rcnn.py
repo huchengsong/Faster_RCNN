@@ -26,7 +26,7 @@ class FasterRCNN(nn.Module):
         img_size = x.size()[2:4]
         x = self.extractor(x)
         _, _, rois, _ = self.rpn(x, img_size)
-        roi_cls_locs, roi_scores = self.head(x, rois)
+        roi_cls_locs, roi_scores = self.head(x, rois, img_size)
 
         return roi_cls_locs, roi_scores, rois
 
@@ -93,7 +93,3 @@ class FasterRCNN(nn.Module):
                     params.append({'params': [value], 'lr': lr, 'weight_decay': Config.weight_decay})
         self.optimizer = torch.optim.SGD(params, momentum=0.9)
 
-    def scale_lr(self, decay):
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] *= decay
-        print('learning rate changed; decay = ', decay)

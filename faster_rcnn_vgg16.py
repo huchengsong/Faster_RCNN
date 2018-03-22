@@ -158,19 +158,24 @@ class VGG16ROIHead(nn.Module):
         self.spatial_scale = spatial_scale
         self.roi_pooling = RoIPooling2D(self.pool_size[0], self.pool_size[1], self.spatial_scale)
 
-    def forward(self, x, rois):
+    def forward(self, x, rois, img_size):
         """
         retrun class and location prediction for each roi
         :param x: pytorch Variable, extracted features
         :param rois: pytorch tensor, rois generated from rpn proposals
         :return: pytorch Variable, roi_cls_locs, roi_scores
         """
-        roi_indices = torch.cuda.FloatTensor(rois.size()[0]).fill_(0)
-        indices_and_rois = torch.stack([roi_indices, rois[:, 0], rois[:, 1], rois[:, 2], rois[:, 3]], dim=1)
-        xy_indices_and_rois = Variable(indices_and_rois[:, [0, 2, 1, 4, 3]]).contiguous()
+        # roi_indices = torch.cuda.FloatTensor(rois.size()[0]).fill_(0)
+        # indices_and_rois = torch.stack([roi_indices, rois[:, 0], rois[:, 1], rois[:, 2], rois[:, 3]], dim=1)
+        # xy_indices_and_rois = Variable(indices_and_rois[:, [0, 2, 1, 4, 3]]).contiguous()
+        # pool_result = self.roi_pooling(x, xy_indices_and_rois)
+        # pool_result = pool_result.view(pool_result.size()[0], -1)
 
-        pool_result = self.roi_pooling(x, xy_indices_and_rois)
+        # TODO: just for testing
+        from Mask_head import roi_align
+        pool_result = roi_align(x, rois, img_size, self.pool_size, sub_sample=2)
         pool_result = pool_result.view(pool_result.size()[0], -1)
+
         fc = self.classifier(pool_result)
         roi_cls_locs = self.cls_loc(fc)
         roi_scores = self.score(fc)
