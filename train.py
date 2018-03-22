@@ -138,6 +138,7 @@ def train(epochs, img_box_dict, test_dict, pretrained_model=Config.load_path):
         # load best and lr decay
         if epoch == 9:
             trainer.load('faster_rcnn_model.pt')
+            trainer.faster_rcnn.get_optimizer(Config.lr)
             trainer.faster_rcnn.scale_lr(Config.lr_decay)
 
 
