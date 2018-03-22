@@ -85,7 +85,7 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
             ymin, xmin, ymax, xmax = [int(j) for j in b]
             cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 0, 255), 1)
             cv2.putText(img,
-                        key[label[i]],
+                        key[label[i]] + str(score[i]),
                         (xmin, ymin),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (0, 0, 255))
@@ -93,7 +93,7 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
             ymin, xmin, ymax, xmax = [int(j) for j in b]
             cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
             cv2.putText(img,
-                        key[gt_label[i]] + str(difficult[i]),
+                        key[gt_label[i]],
                         (xmin, ymin),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         (0, 255, 0))
@@ -121,7 +121,7 @@ def train(epochs, img_box_dict, test_dict, pretrained_model=Config.load_path):
     for epoch in range(epochs):
         print('epoch: ', epoch)
         # randomly divide data into training and validation subset for each epoch
-        dict_train, dict_val = generate_train_val_data(img_box_dict)
+        dict_train = img_box_dict
 
         for i, [img_dir, img_info] in tqdm(enumerate(dict_train.items())):
             img, img_info = rescale_image(img_dir, img_info, flip=True)
@@ -135,8 +135,9 @@ def train(epochs, img_box_dict, test_dict, pretrained_model=Config.load_path):
             max_map = map
             trainer.save('faster_rcnn_model.pt')
 
-        # lr decay
+        # load best and lr decay
         if epoch == 9:
+            trainer.load('faster_rcnn_model.pt')
             trainer.faster_rcnn.scale_lr(Config.lr_decay)
 
 
