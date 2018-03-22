@@ -174,8 +174,7 @@ class VGG16ROIHead(nn.Module):
         # TODO: just for testing
         from Mask_head import roi_align
         pool_result = roi_align(x, rois, img_size, self.pool_size, sub_sample=2)
-        pool_result = pool_result.contiguous()
-        pool_result = pool_result.view(pool_result.size()[0], -1)
+        pool_result = pool_result.view(pool_result.size()[0], -1).contiguous()
         fc = self.classifier(pool_result)
         roi_cls_locs = self.cls_loc(fc)
         roi_scores = self.score(fc)
