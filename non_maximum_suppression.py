@@ -38,20 +38,17 @@ def non_maximum_suppression_roi(box_scores, bboxes, class_list, score_thresh, io
     score_result = []
     label_result = []
 
-    _, class_pred = box_scores.max(dim=1)
-
     for class_id in class_list:
-        index = torch.nonzero((class_pred == class_id) &
-                              (box_scores[:, class_id] > score_thresh)).squeeze_()
-        if len(index) == 0:
+        score_candidate = box_scores[:, class_id]
+        mask = torch.nonzero(score_candidate > score_thresh).squeeze()
+        if len(mask) == 0:
             continue
-        score_candidate = box_scores[:, class_id][index]
-        box_candidate = bboxes[:, class_id * 4:(class_id + 1) * 4][index, :]
+        score_candidate = score_candidate[mask]
+        box_candidate = bboxes[:, class_id * 4:(class_id + 1) * 4][mask, :]
 
         ind_bbox, selected_bbox = non_maximum_suppression_rpn(box_candidate, iou_thresh, score_candidate)
-        selected_score = score_candidate[ind_bbox]
 
-        # tensor to list
+        selected_score = score_candidate[ind_bbox]
         selected_bbox = list(selected_bbox.cpu().numpy())
         selected_score = list(selected_score.cpu().numpy())
         selected_label = [class_id] * len(selected_score)

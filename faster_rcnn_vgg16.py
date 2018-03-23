@@ -167,11 +167,11 @@ class VGG16ROIHead(nn.Module):
         """
         roi_indices = torch.cuda.FloatTensor(rois.size()[0]).fill_(0)
         indices_and_rois = torch.stack([roi_indices, rois[:, 0], rois[:, 1], rois[:, 2], rois[:, 3]], dim=1)
-        xy_indices_and_rois = Variable(indices_and_rois[:, [0, 2, 1, 4, 3]]).contiguous()
-        pool_result = self.roi_pooling(x, xy_indices_and_rois)
+        indices_and_rois = Variable(indices_and_rois[:, [0, 2, 1, 4, 3]]).contiguous()
+        pool_result = self.roi_pooling(x, indices_and_rois)
         pool_result = pool_result.view(pool_result.size()[0], -1)
 
-        # # TODO: just for testing
+        # # # TODO: test this
         # from Mask_head import roi_align
         # pool_result = roi_align(x, rois, img_size, self.pool_size, sub_sample=2)
         # pool_result = pool_result.view(pool_result.size()[0], -1).contiguous()

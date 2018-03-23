@@ -59,7 +59,6 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
         img, img_info = rescale_image(img_dir, img_info, flip=False)
         img_tensor = create_img_tensor(img)
         box, score, label = faster_rcnn.predict(img_tensor)
-
         gt_bbox = np.array(img_info['objects'])[:, 1:5].astype(np.float32)
         gt_label = np.array(img_info['objects'])[:, 0]
         difficult = np.array(img_info['difficult'])
@@ -152,7 +151,7 @@ if __name__ == '__main__':
     img_dir = '../VOCtest2007/VOC2007/JPEGImages'
     test_dict = voc_generate_img_box_dict(xml_dir, img_dir)
 
-    train(14, img_box_dict, test_dict)
+    # train(14, img_box_dict, test_dict)
 
     faster_rcnn = FasterRCNNVGG16().cuda()
     state_dict = torch.load('faster_rcnn_model.pt')
