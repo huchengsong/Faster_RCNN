@@ -30,6 +30,10 @@ def generate_training_anchors(roi, gt_bbox, gt_label, num_sample=Config.roi_num_
     """
     gt_bbox = torch.from_numpy(gt_bbox).cuda()
     gt_label = torch.from_numpy(gt_label).long().cuda()
+
+    # add gt_box to roi
+    roi = torch.cat((roi, gt_bbox), 0)
+
     iou_matrix = bbox_IoU_gpu(gt_bbox, roi)
     max_iou, roi_gt_assignment = iou_matrix.max(dim=0)
 

@@ -75,84 +75,50 @@ def evaluation(eval_dict, faster_rcnn, test_num=Config.eval_num):
         if i == test_num:
             break
 
-        """
-        # ########################################
-        # ########### test code ##################
-        # ########################################
-        key = Config.class_key
-        for i, b in enumerate(box):
-            ymin, xmin, ymax, xmax = [int(j) for j in b]
-            cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 0, 255), 1)
-            cv2.putText(img,
-                        key[label[i]] + str(score[i]),
-                        (xmin, ymin),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                        (0, 0, 255))
-        for i, b in enumerate(gt_bbox):
-            ymin, xmin, ymax, xmax = [int(j) for j in b]
-            cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
-            cv2.putText(img,
-                        key[gt_label[i]],
-                        (xmin, ymin),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                        (0, 255, 0))
-        cv2.imshow('image', img[:, :, [2, 1, 0]])
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        # ########################################
-        # ########### test code ##################
-        # ########################################
-        """
     AP, mAP = calc_map(bboxes, labels, scores, gt_bboxes, gt_labels, gt_difficult, use_07_metric=True)
 
     return mAP
 
 
-def train(epochs, img_box_dict, test_dict, pretrained_model=Config.load_path):
+def train(epochs, img_box_dict, pretrained_model=Config.load_path):
     faster_rcnn = FasterRCNNVGG16().cuda()
     faster_rcnn.get_optimizer(Config.lr)
-    print('model constructed')
     trainer = FasterRCNNTrainer(faster_rcnn).cuda()
+    print('model constructed')
+
     if pretrained_model:
         trainer.load(pretrained_model)
 
-    max_map = 0
+    dict_train, dict_val = generate_train_val_data(img_box_dict, p_train=0.95)
     for epoch in range(epochs):
         print('epoch: ', epoch)
-        # randomly divide data into training and validation subset for each epoch
-        dict_train = img_box_dict
-
         for i, [img_dir, img_info] in tqdm(enumerate(dict_train.items())):
             img, img_info = rescale_image(img_dir, img_info, flip=True)
             img_tensor = create_img_tensor(img)
             trainer.train_step(img_tensor, img_info)
 
         # save the model with better evaluation result
-        map = evaluation(test_dict, faster_rcnn, 1000)
+        map = evaluation(dict_val, faster_rcnn)
         print('mAP: ', map, 'max mAP: ', max_map)
-        if map > max_map:
-            max_map = map
-            trainer.save('faster_rcnn_model.pt')
 
-        # load best and lr decay
+        # lr decay
         if epoch == 9:
-            trainer.load('faster_rcnn_model.pt')
             trainer.scale_lr(Config.lr_decay)
+
+        trainer.save('faster_rcnn_model.pt')
 
 
 if __name__ == '__main__':
-    # train data
+    # train
     xml_dir = '../VOCdevkit2007/VOC2007/Annotations'
     img_dir = '../VOCdevkit2007/VOC2007/JPEGImages'
     img_box_dict = voc_generate_img_box_dict(xml_dir, img_dir)
+    train(14, img_box_dict)
 
-    # test data
+    # test
     xml_dir = '../VOCtest2007/VOC2007/Annotations'
     img_dir = '../VOCtest2007/VOC2007/JPEGImages'
     test_dict = voc_generate_img_box_dict(xml_dir, img_dir)
-
-    # train(14, img_box_dict, test_dict)
-
     faster_rcnn = FasterRCNNVGG16().cuda()
     state_dict = torch.load('faster_rcnn_model.pt')
     faster_rcnn.load_state_dict(state_dict['model'])
