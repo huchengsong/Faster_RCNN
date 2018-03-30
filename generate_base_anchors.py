@@ -67,7 +67,7 @@ def anchor_proposals(feature_height, feature_width, stride, anchor_base):
 
 
 def test():
-    a = generate_base_anchors(ratios=[0.5, 0.75, 1, 1.5, 2])
+    a = generate_base_anchors(ratios=[0.5, 1, 2])
     print(a)
 
     # test anchor_proposals()
