@@ -62,11 +62,10 @@ def create_rpn_proposals(locs, scores, anchors, img_size):
     scores = scores[order].contiguous()
 
     # clip bbox to image size
-    rois[rois < 0] = 0
-    rois[:, 0][rois[:, 0] > img_h - 1] = img_h - 1
-    rois[:, 1][rois[:, 1] > img_w - 1] = img_w - 1
-    rois[:, 2][rois[:, 2] > img_h - 1] = img_h - 1
-    rois[:, 3][rois[:, 3] > img_w - 1] = img_w - 1
+    rois[:, 0].clamp_(0, img_h - 1)
+    rois[:, 1].clamp_(0, img_w - 1)
+    rois[:, 2].clamp_(0, img_h - 1)
+    rois[:, 3].clamp_(0, img_w - 1)
 
     # remove boxes with size smaller than threshold
     height = rois[:, 2] - rois[:, 0]
@@ -165,16 +164,17 @@ class VGG16ROIHead(nn.Module):
         :param rois: pytorch tensor, rois generated from rpn proposals
         :return: pytorch Variable, roi_cls_locs, roi_scores
         """
-        roi_indices = torch.cuda.FloatTensor(rois.size()[0]).fill_(0)
-        indices_and_rois = torch.stack([roi_indices, rois[:, 0], rois[:, 1], rois[:, 2], rois[:, 3]], dim=1)
-        indices_and_rois = Variable(indices_and_rois[:, [0, 2, 1, 4, 3]]).contiguous()
-        pool_result = self.roi_pooling(x, indices_and_rois)
-        pool_result = pool_result.view(pool_result.size()[0], -1)
+        # roi_indices = torch.cuda.FloatTensor(rois.size()[0]).fill_(0)
+        # indices_and_rois = torch.stack([roi_indices, rois[:, 0], rois[:, 1], rois[:, 2], rois[:, 3]], dim=1)
+        # indices_and_rois = Variable(indices_and_rois[:, [0, 2, 1, 4, 3]]).contiguous()
+        # pool_result = self.roi_pooling(x, indices_and_rois)
+        # pool_result = pool_result.view(pool_result.size()[0], -1)
 
         # # # TODO: test this
-        # from Mask_head import roi_align
-        # pool_result = roi_align(x, rois, img_size, self.pool_size, sub_sample=2)
-        # pool_result = pool_result.view(pool_result.size()[0], -1).contiguous()
+        from roi_align import ROIAlign
+        roi_pool = ROIAlign(self.pool_size, sub_sample=2)
+        pool_result = roi_pool(x, rois, 1./16)
+        pool_result = pool_result.view(pool_result.size()[0], -1).contiguous()
 
         fc = self.classifier(pool_result)
         roi_cls_locs = self.cls_loc(fc)

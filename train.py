@@ -99,7 +99,7 @@ def train(epochs, img_box_dict, pretrained_model=Config.load_path):
 
         # save the model with better evaluation result
         map = evaluation(dict_val, faster_rcnn)
-        print('mAP: ', map, 'max mAP: ', max_map)
+        print('mAP: ', map)
 
         # lr decay
         if epoch == 9:
